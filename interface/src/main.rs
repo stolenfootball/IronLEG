@@ -1,7 +1,8 @@
+use memory::Memory;
 use memory::memory;
 
 fn main() {
-    let mut mem = memory::Memory::new(65536, 16, 4, 5);
+    let mut mem = memory::RAM::new(65536, 16, 4, 5);
     // let result = mem.read(0).unwrap();
     // println!("Read result: {result}");
 
