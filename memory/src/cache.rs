@@ -1,5 +1,5 @@
 pub mod cache {
-    use crate::memory::{self, Memory, MemoryType, MemoryValue, MemoryAccess, PipelineStage};
+    use crate::memory::{self, Memory, MemoryValue, MemoryAccess, PipelineStage};
 
     #[derive(Debug)]
     struct CacheLocation {
@@ -48,6 +48,29 @@ pub mod cache {
             }
         }
 
+        fn align(&self, addr: usize) -> usize {
+            ((addr % self.size) / self.word_size) * self.word_size
+        }
+
+        fn attempt_access(&mut self, attempt_stage: PipelineStage) -> bool {
+            match self.access.stage {
+                Some(current_stage) => {
+                    if current_stage != attempt_stage { 
+                        return false; 
+                    }
+                    self.access.cycles_to_completion -= 1;
+                    return self.access.cycles_to_completion <= 1;
+                },
+                None => self.access.stage = Some(attempt_stage)
+            }
+            false
+        }
+
+        fn reset_access_state(&mut self) {
+            self.access.cycles_to_completion = i32::try_from(self.latency).unwrap();
+            self.access.stage = None;
+        }
+
         pub fn set_lower_level(&mut self, mem_type:&'static mut dyn Memory) {
             self.lower_level = Some(mem_type);
         }
@@ -76,25 +99,6 @@ pub mod cache {
         }
     }
 
-    impl MemoryType for Cache {
-        fn size(&self) -> usize { self.size }
-        fn word_size(&self) -> usize { self.word_size }
-        fn block_size(&self) -> usize { self.block_size }
-        fn access(&self) -> MemoryAccess { self.access }
-        fn latency(&self) -> usize { self.latency }
-        fn set_access(&mut self, cycles_to_completion: Option<i32>, stage: Option<PipelineStage>) {
-            if let Some(cycles) = cycles_to_completion {
-                self.access.cycles_to_completion = cycles;
-            }
-            if let Some(pipeline_stage) = stage {
-                self.access.stage = Some(pipeline_stage);
-            }
-        }
-        fn reset_stage(&mut self) {
-            self.access.stage = None;
-        }
-    }
-
     impl memory::Memory for Cache {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
             if !self.attempt_access(stage) { return None; }
@@ -102,7 +106,6 @@ pub mod cache {
             let location = self.cache_location(addr);
             match self.get_way(addr, false) {
                 Some(content) =>  {
-                    println!("{:?}", content);
                     if line {
                         Some(MemoryValue::Line(&content.contents))
                     } else {
@@ -126,7 +129,6 @@ pub mod cache {
                         MemoryValue::Value(val) => content.contents[location.offset] = val,
                         MemoryValue::Line(val) => content.contents = val.to_vec() // Not efficient, come back later
                     };
-                    println!("{:?}", content);
                     Some(())
                 },
                 None => None  // No room in cache.  Will be fixed later

@@ -1,11 +1,11 @@
 pub mod ram {
-    use crate::memory::{self, MemoryValue, MemoryType};
+    use crate::memory::{self, MemoryValue, PipelineStage, MemoryAccess};
     pub struct RAM {
         size: usize,
         block_size: usize,
         word_size: usize,
         latency: usize,
-        access: memory::MemoryAccess,
+        access: MemoryAccess,
         contents: Vec<Vec<usize>>,
     }
 
@@ -16,7 +16,7 @@ pub mod ram {
                 block_size: block_size,
                 word_size: word_size,
                 latency: latency,
-                access: memory::MemoryAccess {
+                access: MemoryAccess {
                     cycles_to_completion: i32::try_from(latency).unwrap(),
                     stage: None,
                 },
@@ -28,29 +28,33 @@ pub mod ram {
             let addr = self.align(addr);
             ((addr / self.word_size) % self.size / self.block_size, (addr / self.word_size) % self.block_size)
         }
-    }
 
-    impl memory::MemoryType for RAM {
-        fn size(&self) -> usize { self.size }
-        fn word_size(&self) -> usize { self.word_size }
-        fn block_size(&self) -> usize { self.block_size }
-        fn access(&self) -> memory::MemoryAccess { self.access }
-        fn latency(&self) -> usize { self.latency }
-        fn set_access(&mut self, cycles_to_completion: Option<i32>, stage: Option<memory::PipelineStage>) {
-            if let Some(cycles) = cycles_to_completion {
-                self.access.cycles_to_completion = cycles;
-            }
-            if let Some(pipeline_stage) = stage {
-                self.access.stage = Some(pipeline_stage);
-            }
+        fn align(&self, addr: usize) -> usize {
+            ((addr % self.size) / self.word_size) * self.word_size
         }
-        fn reset_stage(&mut self) {
+
+        fn attempt_access(&mut self, attempt_stage: PipelineStage) -> bool {
+            match self.access.stage {
+                Some(current_stage) => {
+                    if current_stage != attempt_stage { 
+                        return false; 
+                    }
+                    self.access.cycles_to_completion -= 1;
+                    return self.access.cycles_to_completion <= 1;
+                },
+                None => self.access.stage = Some(attempt_stage)
+            }
+            false
+        }
+
+        fn reset_access_state(&mut self) {
+            self.access.cycles_to_completion = i32::try_from(self.latency).unwrap();
             self.access.stage = None;
         }
     }
 
     impl memory::Memory for RAM {
-        fn read(&mut self, addr: usize, stage: memory::PipelineStage, line: bool) -> Option<memory::MemoryValue> {
+        fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
             if !self.attempt_access(stage) { return None; }
             self.reset_access_state();
 
@@ -62,7 +66,7 @@ pub mod ram {
             }
         }
 
-        fn write(&mut self, addr: usize, value: MemoryValue, stage: memory::PipelineStage) -> Option<()> {
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> Option<()> {
             if !self.attempt_access(stage) { return None; }
             self.reset_access_state();
 
