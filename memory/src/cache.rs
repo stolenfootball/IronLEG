@@ -1,6 +1,5 @@
 pub mod cache {
-    use crate::memory::{self, Memory};
-    use crate::memory::MemoryType;
+    use crate::memory::{self, Memory, MemoryType, MemoryValue, MemoryAccess, PipelineStage};
 
     struct CacheLocation {
         offset: usize,
@@ -22,7 +21,7 @@ pub mod cache {
         latency: usize,
         associativity: usize,
         lower_level: Option<&'static mut dyn Memory>,
-        access: memory::MemoryAccess,
+        access: MemoryAccess,
         contents: Vec<CacheLine>,
     }
 
@@ -35,7 +34,7 @@ pub mod cache {
                 latency: latency,
                 associativity: associativity,
                 lower_level: None,
-                access: memory::MemoryAccess {
+                access: MemoryAccess {
                     cycles_to_completion: i32::try_from(latency).unwrap(),
                     stage: None,
                 },
@@ -66,10 +65,10 @@ pub mod cache {
             let mut cache_content = &self.contents[location.index];
             for i in (location.index + 1)..(location.index + self.associativity) {
                 if (cache_content.valid && cache_content.tag == location.tag) || (!cache_content.valid && is_write) {
-                    let content =  &mut self.contents[location.index];
-                    return Some(content); 
+                    self.reset_access_state();
+                    return Some(&mut self.contents[location.index]); 
                 }
-                cache_content = &mut self.contents[i];
+                cache_content = &self.contents[i];
             }
             None
         }
@@ -79,9 +78,9 @@ pub mod cache {
         fn size(&self) -> usize { self.size }
         fn word_size(&self) -> usize { self.word_size }
         fn block_size(&self) -> usize { self.block_size }
-        fn access(&self) -> memory::MemoryAccess { self.access }
+        fn access(&self) -> MemoryAccess { self.access }
         fn latency(&self) -> usize { self.latency }
-        fn set_access(&mut self, cycles_to_completion: Option<i32>, stage: Option<memory::PipelineStage>) {
+        fn set_access(&mut self, cycles_to_completion: Option<i32>, stage: Option<PipelineStage>) {
             if let Some(cycles) = cycles_to_completion {
                 self.access.cycles_to_completion = cycles;
             }
@@ -95,35 +94,38 @@ pub mod cache {
     }
 
     impl memory::Memory for Cache {
-        fn read(&mut self, addr: usize, stage: memory::PipelineStage) -> Option<usize> {
+        fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
             if !self.attempt_access(stage) { return None; }
 
             let location = self.cache_location(addr);
-            let result = match self.get_way(addr, false) {
-                Some(content) => Some(content.contents[location.offset]),
+            match self.get_way(addr, false) {
+                Some(content) =>  {
+                    if line {
+                        Some(MemoryValue::Line(&content.contents))
+                    } else {
+                        Some(MemoryValue::Value(content.contents[location.offset]))
+                    }
+                },
                 None => None
-            };
-
-            if let Some(_) = result { self.reset_access_state() };
-            result
+            }
         }
 
-        fn write(&mut self, addr: usize, value: usize, stage: memory::PipelineStage) -> Option<usize> {
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> Option<()> {
             if !self.attempt_access(stage) { return None; }
 
             let location = self.cache_location(addr);
-            let result = match self.get_way(addr, true) {
+            match self.get_way(addr, true) {
                 Some(content) => {
-                    content.contents[location.offset] = value;
                     content.dirty = true;
                     content.valid = true;
-                    Some(value)
+                    match value {
+                        MemoryValue::Value(val) => content.contents[location.offset] = val,
+                        MemoryValue::Line(val) => content.contents = val.to_vec() // Not efficient, come back later
+                    };
+                    Some(())
                 },
                 None => None  // No room in cache.  Will be fixed later
-            };
-
-            if let Some(_) = result { self.reset_access_state() };
-            result
+            }
         }
     }
 }

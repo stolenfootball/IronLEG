@@ -1,6 +1,5 @@
 pub mod ram {
-    use crate::memory;
-    use crate::memory::MemoryType;
+    use crate::memory::{self, MemoryValue, MemoryType};
     pub struct RAM {
         size: usize,
         block_size: usize,
@@ -51,19 +50,28 @@ pub mod ram {
     }
 
     impl memory::Memory for RAM {
-        fn read(&mut self, addr: usize, stage: memory::PipelineStage) -> Option<usize> {
+        fn read(&mut self, addr: usize, stage: memory::PipelineStage, line: bool) -> Option<memory::MemoryValue> {
             if !self.attempt_access(stage) { return None; }
-            let addr = self.addr_to_offset(addr);
             self.reset_access_state();
-            Some(self.contents[addr.0][addr.1])
+
+            let addr = self.addr_to_offset(addr);
+            if line {
+                Some(memory::MemoryValue::Line(&self.contents[addr.0]))
+            } else {
+                Some(memory::MemoryValue::Value(self.contents[addr.0][addr.1]))
+            }
         }
 
-        fn write(&mut self, addr: usize, value: usize, stage: memory::PipelineStage) -> Option<usize> {
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: memory::PipelineStage) -> Option<()> {
             if !self.attempt_access(stage) { return None; }
-            let addr = self.addr_to_offset(addr);
-            self.contents[addr.0][addr.1] = value;
             self.reset_access_state();
-            Some(value)
+
+            let addr = self.addr_to_offset(addr);
+            match value {
+                MemoryValue::Value(val) => self.contents[addr.0][addr.1] = val,
+                MemoryValue::Line(val) => self.contents[addr.0] = val.to_vec() // Not efficient, come back later
+            }
+            Some(())
         }
     }
 }
