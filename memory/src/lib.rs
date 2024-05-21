@@ -21,15 +21,15 @@ pub mod memory {
     }
 
     pub trait MemoryType {
-        fn size(&self) -> u32;
-        fn word_size(&self) -> u32;
-        fn block_size(&self) -> u32;
+        fn size(&self) -> usize;
+        fn word_size(&self) -> usize;
+        fn block_size(&self) -> usize;
         fn access(&self) -> MemoryAccess;
-        fn latency(&self) -> u32;
+        fn latency(&self) -> usize;
         fn set_access(&mut self, cycles_to_completion: Option<i32>, stage: Option<PipelineStage>);
         fn reset_stage(&mut self);
 
-        fn align(&self, addr: u32) -> u32 {
+        fn align(&self, addr: usize) -> usize {
             ((addr % self.size()) / self.word_size()) * self.word_size()
         }
 
@@ -54,8 +54,8 @@ pub mod memory {
     }
 
     pub trait Memory {
-        fn read(&mut self, addr: u32, stage: PipelineStage) -> Option<u32>;
-        fn write(&mut self, addr: u32, value: u32, stage: PipelineStage) -> Option<u32>;
+        fn read(&mut self, addr: usize, stage: PipelineStage) -> Option<usize>;
+        fn write(&mut self, addr: usize, value: usize, stage: PipelineStage) -> Option<usize>;
     }
 
   

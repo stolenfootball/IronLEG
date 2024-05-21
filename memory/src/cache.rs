@@ -1,38 +1,40 @@
 pub mod cache {
-    use crate::memory;
+    use crate::memory::{self, Memory};
     use crate::memory::MemoryType;
 
     struct CacheLocation {
-        offset: u32,
-        index: u32,
-        tag: u32,
+        offset: usize,
+        index: usize,
+        tag: usize,
     }
     #[derive(Clone)]
     struct CacheLine {
         valid: bool,
         dirty: bool,
-        tag: u32,
-        contents: Vec<u32>,
+        tag: usize,
+        contents: Vec<usize>,
     }
 
     pub struct Cache {
-        size: u32,
-        block_size: u32,
-        word_size: u32,
-        latency: u32,
-        associativity: u32,
+        size: usize,
+        block_size: usize,
+        word_size: usize,
+        latency: usize,
+        associativity: usize,
+        lower_level: Option<&'static mut dyn Memory>,
         access: memory::MemoryAccess,
         contents: Vec<CacheLine>,
     }
 
     impl Cache {
-        pub fn new(size: u32, block_size: u32, word_size: u32, latency: u32, associativity: u32) -> Self {
+        pub fn new(size: usize, block_size: usize, word_size: usize, latency: usize, associativity: usize) -> Self {
             Self {
                 size: size,
                 block_size: block_size,
                 word_size: word_size,
                 latency: latency,
                 associativity: associativity,
+                lower_level: None,
                 access: memory::MemoryAccess {
                     cycles_to_completion: i32::try_from(latency).unwrap(),
                     stage: None,
@@ -42,12 +44,16 @@ pub mod cache {
                     dirty: false,
                     tag: 0,
                     contents: vec![0, block_size],
-                }; size.try_into().unwrap()],
+                }; size],
             }
         }
 
-        fn cache_location(&self, addr: u32) -> CacheLocation {
-            let offset = addr & 2_u32.pow(self.word_size()) - 1;
+        pub fn set_lower_level(&mut self, mem_type:&'static mut dyn Memory) {
+            self.lower_level = Some(mem_type);
+        }
+
+        fn cache_location(&self, addr: usize) -> CacheLocation {
+            let offset = addr & 2_usize.pow(u32::try_from(self.word_size()).unwrap()) - 1;
             CacheLocation {
                 offset: offset,
                 index: (addr / self.word_size() >> offset % self.size()) / self.associativity * self.associativity,
@@ -55,26 +61,26 @@ pub mod cache {
             }
         }
 
-        fn get_way(&mut self, addr: u32, is_write: bool) -> Option<&mut CacheLine> {
+        fn get_way(&mut self, addr: usize, is_write: bool) -> Option<&mut CacheLine> {
             let location = self.cache_location(self.align(addr));
-            let mut cache_content = &self.contents[usize::try_from(location.index).unwrap()];
+            let mut cache_content = &self.contents[location.index];
             for i in (location.index + 1)..(location.index + self.associativity) {
                 if (cache_content.valid && cache_content.tag == location.tag) || (!cache_content.valid && is_write) {
-                    let content =  &mut self.contents[usize::try_from(location.index).unwrap()];
+                    let content =  &mut self.contents[location.index];
                     return Some(content); 
                 }
-                cache_content = &mut self.contents[usize::try_from(i).unwrap()];
+                cache_content = &mut self.contents[i];
             }
             None
         }
     }
 
     impl MemoryType for Cache {
-        fn size(&self) -> u32 { self.size }
-        fn word_size(&self) -> u32 { self.word_size }
-        fn block_size(&self) -> u32 { self.block_size }
+        fn size(&self) -> usize { self.size }
+        fn word_size(&self) -> usize { self.word_size }
+        fn block_size(&self) -> usize { self.block_size }
         fn access(&self) -> memory::MemoryAccess { self.access }
-        fn latency(&self) -> u32 { self.latency }
+        fn latency(&self) -> usize { self.latency }
         fn set_access(&mut self, cycles_to_completion: Option<i32>, stage: Option<memory::PipelineStage>) {
             if let Some(cycles) = cycles_to_completion {
                 self.access.cycles_to_completion = cycles;
@@ -89,33 +95,35 @@ pub mod cache {
     }
 
     impl memory::Memory for Cache {
-        fn read(&mut self, addr: u32, stage: memory::PipelineStage) -> Option<u32> {
+        fn read(&mut self, addr: usize, stage: memory::PipelineStage) -> Option<usize> {
             if !self.attempt_access(stage) { return None; }
 
-            self.reset_access_state();
-
             let location = self.cache_location(addr);
-            match self.get_way(addr, false) {
-                Some(content) => Some(content.contents[usize::try_from(location.offset).unwrap()]),
-                None => None // Cache miss, will be implemented later
-            }
+            let result = match self.get_way(addr, false) {
+                Some(content) => Some(content.contents[location.offset]),
+                None => None
+            };
+
+            if let Some(_) = result { self.reset_access_state() };
+            result
         }
 
-        fn write(&mut self, addr: u32, value: u32, stage: memory::PipelineStage) -> Option<u32> {
+        fn write(&mut self, addr: usize, value: usize, stage: memory::PipelineStage) -> Option<usize> {
             if !self.attempt_access(stage) { return None; }
 
-            self.reset_access_state();
-
             let location = self.cache_location(addr);
-            match self.get_way(addr, true) {
+            let result = match self.get_way(addr, true) {
                 Some(content) => {
-                    content.contents[usize::try_from(location.offset).unwrap()] = value;
+                    content.contents[location.offset] = value;
                     content.dirty = true;
                     content.valid = true;
-                    return Some(value);
+                    Some(value)
                 },
                 None => None  // No room in cache.  Will be fixed later
-            }
+            };
+
+            if let Some(_) = result { self.reset_access_state() };
+            result
         }
     }
 }

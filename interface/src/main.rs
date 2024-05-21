@@ -7,7 +7,7 @@ fn main() {
     // for _ in 0..5 {
     //     mem.write(0, 50, memory::PipelineStage::Memory);
     // }
-    // let mut result: Option<u32> = None;
+    // let mut result: Option<usize> = None;
     // for _ in 0..5 {
     //     result = mem.read(0, memory::PipelineStage::Fetch);
     // }
@@ -17,7 +17,7 @@ fn main() {
     for _ in 0..5 {
         cache.write(0, 50, memory::PipelineStage::Memory);
     }
-    let mut result: Option<u32> = None;
+    let mut result: Option<usize> = None;
     for _ in 0..5 {
         result = cache.read(0, memory::PipelineStage::Fetch);
     }
