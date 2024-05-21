@@ -92,6 +92,8 @@ pub mod cache {
         fn read(&mut self, addr: u32, stage: memory::PipelineStage) -> Option<u32> {
             if !self.attempt_access(stage) { return None; }
 
+            self.reset_access_state();
+
             let location = self.cache_location(addr);
             match self.get_way(addr, false) {
                 Some(content) => Some(content.contents[usize::try_from(location.offset).unwrap()]),
@@ -102,6 +104,8 @@ pub mod cache {
         fn write(&mut self, addr: u32, value: u32, stage: memory::PipelineStage) -> Option<u32> {
             if !self.attempt_access(stage) { return None; }
 
+            self.reset_access_state();
+
             let location = self.cache_location(addr);
             match self.get_way(addr, true) {
                 Some(content) => {
@@ -111,8 +115,7 @@ pub mod cache {
                     return Some(value);
                 },
                 None => None  // No room in cache.  Will be fixed later
-            }?;
-            None
+            }
         }
     }
 }
