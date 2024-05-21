@@ -85,8 +85,7 @@ pub mod cache {
             }
         }
 
-        fn get_way(&mut self, addr: usize, is_write: bool) -> Option<&mut CacheLine> {
-            let location = self.cache_location(self.align(addr));
+        fn get_way(&mut self, location: &CacheLocation, is_write: bool) -> Option<&mut CacheLine> {
             let mut cache_content = &self.contents[location.index];
             for i in (location.index)..(location.index + self.associativity) {
                 if (cache_content.valid && cache_content.tag == location.tag) || (!cache_content.valid && is_write) {
@@ -104,7 +103,7 @@ pub mod cache {
             if !self.attempt_access(stage) { return None; }
 
             let location = self.cache_location(addr);
-            match self.get_way(addr, false) {
+            match self.get_way(&location, false) {
                 Some(content) =>  {
                     if line {
                         Some(MemoryValue::Line(&content.contents))
@@ -120,7 +119,7 @@ pub mod cache {
             if !self.attempt_access(stage) { return None; }
 
             let location = self.cache_location(addr);
-            match self.get_way(addr, true) {
+            match self.get_way(&location, true) {
                 Some(content) => {
                     content.dirty = true;
                     content.valid = true;
