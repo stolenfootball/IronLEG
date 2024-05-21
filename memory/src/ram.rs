@@ -20,13 +20,13 @@ pub mod ram {
                     cycles_to_completion: i32::try_from(latency).unwrap(),
                     stage: None,
                 },
-                contents: vec![vec![0, block_size]; size.try_into().unwrap()],
+                contents: vec![vec![0; block_size]; size.try_into().unwrap()],
             }
         }
 
         fn addr_to_offset(&self, addr: usize) -> (usize, usize) {
             let addr = self.align(addr);
-            (addr % self.size / self.block_size, addr % self.block_size)
+            ((addr / self.word_size) % self.size / self.block_size, (addr / self.word_size) % self.block_size)
         }
     }
 

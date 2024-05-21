@@ -1,12 +1,13 @@
 pub mod cache {
     use crate::memory::{self, Memory, MemoryType, MemoryValue, MemoryAccess, PipelineStage};
 
+    #[derive(Debug)]
     struct CacheLocation {
         offset: usize,
         index: usize,
         tag: usize,
     }
-    #[derive(Clone)]
+    #[derive(Clone, Debug)]
     struct CacheLine {
         valid: bool,
         dirty: bool,
@@ -42,7 +43,7 @@ pub mod cache {
                     valid: false,
                     dirty: false,
                     tag: 0,
-                    contents: vec![0, block_size],
+                    contents: vec![0; block_size],
                 }; size],
             }
         }
@@ -52,21 +53,22 @@ pub mod cache {
         }
 
         fn cache_location(&self, addr: usize) -> CacheLocation {
-            let offset = addr & 2_usize.pow(u32::try_from(self.word_size()).unwrap()) - 1;
+            let addr = self.align(addr);
+            let offset = (addr & 2_usize.pow(u32::try_from(self.word_size).unwrap()) - 1) / self.word_size;
             CacheLocation {
                 offset: offset,
-                index: (addr / self.word_size() >> offset % self.size()) / self.associativity * self.associativity,
-                tag:   addr / self.word_size() >> offset / self.size(),
+                index: ((addr / self.word_size) >> offset) % self.size / self.associativity * self.associativity,
+                tag:   ((addr / self.word_size) >> offset) / self.size,
             }
         }
 
         fn get_way(&mut self, addr: usize, is_write: bool) -> Option<&mut CacheLine> {
             let location = self.cache_location(self.align(addr));
             let mut cache_content = &self.contents[location.index];
-            for i in (location.index + 1)..(location.index + self.associativity) {
+            for i in (location.index)..(location.index + self.associativity) {
                 if (cache_content.valid && cache_content.tag == location.tag) || (!cache_content.valid && is_write) {
                     self.reset_access_state();
-                    return Some(&mut self.contents[location.index]); 
+                    return Some(&mut self.contents[i]); 
                 }
                 cache_content = &self.contents[i];
             }
@@ -100,6 +102,7 @@ pub mod cache {
             let location = self.cache_location(addr);
             match self.get_way(addr, false) {
                 Some(content) =>  {
+                    println!("{:?}", content);
                     if line {
                         Some(MemoryValue::Line(&content.contents))
                     } else {
@@ -118,10 +121,12 @@ pub mod cache {
                 Some(content) => {
                     content.dirty = true;
                     content.valid = true;
+                    content.tag = location.tag;
                     match value {
                         MemoryValue::Value(val) => content.contents[location.offset] = val,
                         MemoryValue::Line(val) => content.contents = val.to_vec() // Not efficient, come back later
                     };
+                    println!("{:?}", content);
                     Some(())
                 },
                 None => None  // No room in cache.  Will be fixed later
