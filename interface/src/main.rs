@@ -1,17 +1,25 @@
-use memory::Memory;
 use memory::memory;
+use memory::Memory;
 
 fn main() {
-    let mut mem = memory::RAM::new(65536, 16, 4, 5);
-    // let result = mem.read(0).unwrap();
-    // println!("Read result: {result}");
+    // let mut mem = memory::RAM::new(65536, 16, 4, 5);
 
+    // for _ in 0..5 {
+    //     mem.write(0, 50, memory::PipelineStage::Memory);
+    // }
+    // let mut result: Option<u32> = None;
+    // for _ in 0..5 {
+    //     result = mem.read(0, memory::PipelineStage::Fetch);
+    // }
+    // println!("Read result: {}", result.unwrap());
+
+    let mut cache = memory::Cache::new(2048, 16, 4, 5, 2);
     for _ in 0..5 {
-        mem.write(0, 50, memory::PipelineStage::Memory);
+        cache.write(0, 50, memory::PipelineStage::Memory);
     }
     let mut result: Option<u32> = None;
     for _ in 0..5 {
-        result = mem.read(0, memory::PipelineStage::Fetch);
+        result = cache.read(0, memory::PipelineStage::Fetch);
     }
-    println!("Read result: {}", result.unwrap());
+    print!("Cache result: {}", result.unwrap());
 }
