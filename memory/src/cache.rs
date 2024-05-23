@@ -127,6 +127,7 @@ pub mod cache {
                     Some(level) => match level.read(addr, stage, true) {
                         Some(value) => {
                             self.update_set(&location, &value);
+                            self.reset_access_state();
                             if line {
                                 Some(value)
                             } else {
