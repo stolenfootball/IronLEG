@@ -1,6 +1,8 @@
 pub mod ram;
 pub mod cache;
 pub mod memory {
+    use std::rc::Rc;
+    use std::cell::RefCell;
     pub use crate::ram::ram::RAM;
     pub use crate::cache::cache::Cache;
 
@@ -14,9 +16,9 @@ pub mod memory {
     }
 
 #[derive(Debug)]
-    pub enum MemoryValue<'a> {
+    pub enum MemoryValue {
         Value(usize),
-        Line(&'a Vec<usize>),
+        Line(Rc<RefCell<Vec<usize>>>),
     }
 
     #[derive(Clone, Copy, Debug)]

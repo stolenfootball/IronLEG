@@ -1,12 +1,15 @@
 pub mod ram {
+    use std::rc::Rc;
+    use std::cell::RefCell;
     use crate::memory::{self, MemoryValue, PipelineStage, MemoryAccess};
+
     pub struct RAM {
         size: usize,
         block_size: usize,
         word_size: usize,
         latency: usize,
         access: MemoryAccess,
-        contents: Vec<Vec<usize>>,
+        contents: Vec<Rc<RefCell<Vec<usize>>>>,
     }
 
     impl RAM {
@@ -20,7 +23,7 @@ pub mod ram {
                     cycles_to_completion: i32::try_from(latency).unwrap(),
                     stage: None,
                 },
-                contents: vec![vec![0; block_size]; size.try_into().unwrap()],
+                contents: vec![Rc::new(RefCell::new(vec![0; block_size])); size.try_into().unwrap()],
             }
         }
 
@@ -60,9 +63,9 @@ pub mod ram {
 
             let addr = self.addr_to_offset(addr);
             if line {
-                Some(memory::MemoryValue::Line(&self.contents[addr.0]))
+                Some(memory::MemoryValue::Line(Rc::clone(&self.contents[addr.0])))
             } else {
-                Some(memory::MemoryValue::Value(self.contents[addr.0][addr.1]))
+                Some(memory::MemoryValue::Value(self.contents[addr.0].borrow()[addr.1]))
             }
         }
 
@@ -72,8 +75,8 @@ pub mod ram {
 
             let addr = self.addr_to_offset(addr);
             match value {
-                MemoryValue::Value(val) => self.contents[addr.0][addr.1] = val,
-                MemoryValue::Line(val) => self.contents[addr.0] = val.to_vec() // Not efficient, come back later
+                MemoryValue::Value(val) => self.contents[addr.0].borrow_mut()[addr.1] = val,
+                MemoryValue::Line(val) => self.contents[addr.0] = val 
             }
             Some(())
         }
