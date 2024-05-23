@@ -18,18 +18,18 @@ pub mod cache {
         contents: Rc<RefCell<Vec<usize>>>,
     }
 
-    pub struct Cache {
+    pub struct Cache<'a> {
         size: usize,
         // block_size: usize,
         word_size: usize,
         latency: usize,
         associativity: usize,
-        lower_level: Option<&'static mut dyn Memory>,
+        lower_level: Option<&'a mut dyn Memory>,
         access: MemoryAccess,
         contents: Vec<CacheLine>,
     }
 
-    impl Cache {
+    impl <'a> Cache<'a> {
         pub fn new(size: usize, block_size: usize, word_size: usize, latency: usize, associativity: usize) -> Self {
             Self {
                 size: size,
@@ -74,7 +74,7 @@ pub mod cache {
             self.access.stage = None;
         }
 
-        pub fn set_lower_level(&mut self, mem_type: &'static mut dyn Memory) {
+        pub fn set_lower_level(&mut self, mem_type: &'a mut dyn Memory) {
             self.lower_level = Some(mem_type);
         }
 
@@ -99,7 +99,7 @@ pub mod cache {
         }
     }
 
-    impl memory::Memory for Cache {
+    impl <'a> memory::Memory for Cache<'a> {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
             if !self.attempt_access(stage) { return None; }
 
@@ -112,7 +112,10 @@ pub mod cache {
                         Some(MemoryValue::Value(content.contents.borrow()[location.offset]))
                     }
                 },
-                None => None
+                None => match &mut self.lower_level {
+                    Some(level) => level.read(addr, stage, false),
+                    None => None
+                }
             }
         }
 
