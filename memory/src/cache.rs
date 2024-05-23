@@ -4,6 +4,7 @@ pub mod cache {
     use std::rc::Rc;
     use std::cell::RefCell;
     use rand::Rng;
+    use rand::Rng;
 
     #[derive(Debug)]
     struct CacheLocation {
@@ -97,6 +98,20 @@ pub mod cache {
             }
             None
         }
+
+        // random replacement policy
+        fn get_replacement(&mut self, location: &CacheLocation) -> &mut CacheLine {
+            &mut self.contents[location.index + rand::thread_rng().gen_range(0..self.associativity)]
+        }
+
+        fn update_set(&mut self, location: &CacheLocation, value: &MemoryValue) {
+            if let MemoryValue::Line(line) = value {
+                self.get_replacement(location).contents = Rc::clone(line);
+            }
+        }
+
+
+
 
         // random replacement policy
         fn get_replacement(&mut self, location: &CacheLocation) -> &mut CacheLine {
