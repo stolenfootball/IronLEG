@@ -20,7 +20,7 @@ pub mod cache {
 
     pub struct Cache<'a> {
         size: usize,
-        // block_size: usize,
+        block_size: usize,
         word_size: usize,
         latency: usize,
         associativity: usize,
@@ -33,7 +33,7 @@ pub mod cache {
         pub fn new(size: usize, block_size: usize, word_size: usize, latency: usize, associativity: usize) -> Self {
             Self {
                 size: size,
-                // block_size: block_size,
+                block_size: block_size,
                 word_size: word_size,
                 latency: latency,
                 associativity: associativity,
@@ -79,12 +79,11 @@ pub mod cache {
         }
 
         fn cache_location(&self, addr: usize) -> CacheLocation {
-            let addr = self.align(addr);
-            let offset = (addr / self.word_size) & 2_usize.pow(u32::try_from(self.word_size).unwrap()) - 1;
+            let addr = self.align(addr) / self.word_size;
             CacheLocation {
-                offset: offset,
-                index: ((addr / self.word_size) >> offset) % self.size / self.associativity * self.associativity,
-                tag:   ((addr / self.word_size) >> offset) / self.size,
+                offset: addr & self.block_size - 1,
+                index: (addr >> usize::ilog2(self.block_size)) * self.associativity % self.size,
+                tag:   (addr >> usize::ilog2(self.block_size)) / self.size,
             }
         }
 
