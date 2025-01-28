@@ -1,8 +1,5 @@
 pub mod cache {
-    
     use crate::memory::{self, Memory, MemoryValue, MemoryAccess, PipelineStage};
-    use std::rc::Rc;
-    use std::cell::RefCell;
     use rand::Rng;
 
     #[derive(Debug)]
@@ -11,19 +8,19 @@ pub mod cache {
         index: usize,
         tag: usize,
     }
+
     #[derive(Clone, Debug)]
     struct CacheLine {
         valid: bool,
         dirty: bool,
         tag: usize,
-        contents: Rc<RefCell<Vec<usize>>>,
+        contents: Vec<usize>,
     }
 
     pub struct Cache<'a> {
         size: usize,
         block_size: usize,
         word_size: usize,
-        latency: usize,
         associativity: usize,
         lower_level: Option<&'a mut dyn Memory>,
         access: MemoryAccess,
@@ -31,52 +28,25 @@ pub mod cache {
     }
 
     impl <'a> Cache<'a> {
-        pub fn new(size: usize, block_size: usize, word_size: usize, latency: usize, associativity: usize) -> Self {
+        pub fn new(size: usize, block_size: usize, word_size: usize, latency: i32, associativity: usize) -> Self {
             Self {
                 size: size,
                 block_size: block_size,
                 word_size: word_size,
-                latency: latency,
                 associativity: associativity,
                 lower_level: None,
-                access: MemoryAccess {
-                    cycles_to_completion: i32::try_from(latency).unwrap(),
-                    stage: None,
-                },
+                access: MemoryAccess::new(latency, None),
                 contents: vec![CacheLine {
                     valid: false,
                     dirty: false,
                     tag: 0,
-                    contents: Rc::new(RefCell::new(vec![0; block_size])),
+                    contents: vec![0; block_size],
                 }; size],
             }
         }
 
         fn align(&self, addr: usize) -> usize {
             ((addr % self.size) / self.word_size) * self.word_size
-        }
-
-        fn attempt_access(&mut self, attempt_stage: PipelineStage) -> bool {
-            match self.access.stage {
-                Some(current_stage) => {
-                    if current_stage != attempt_stage { 
-                        return false; 
-                    }
-                    self.access.cycles_to_completion -= 1;
-                    return self.access.cycles_to_completion <= 1;
-                },
-                None => self.access.stage = Some(attempt_stage)
-            }
-            false
-        }
-
-        fn reset_access_state(&mut self) {
-            self.access.cycles_to_completion = i32::try_from(self.latency).unwrap();
-            self.access.stage = None;
-        }
-
-        pub fn set_lower_level(&mut self, mem_type: &'a mut dyn Memory) {
-            self.lower_level = Some(mem_type);
         }
 
         fn cache_location(&self, addr: usize) -> CacheLocation {
@@ -88,79 +58,65 @@ pub mod cache {
             }
         }
 
-        fn get_way(&mut self, location: &CacheLocation, is_write: bool) -> Option<&mut CacheLine> {
+        fn get_read_line(&self, location: &CacheLocation) -> Option<&CacheLine> {
             for i in (location.index)..(location.index + self.associativity) {
-                if (self.contents[i].valid && self.contents[i].tag == location.tag) || (!self.contents[i].valid && is_write) {
-                    self.reset_access_state();
-                    return Some(&mut self.contents[i]); 
+                if self.contents[i].valid && self.contents[i].tag == location.tag {
+                    return Some(&self.contents[i]); 
                 }
             }
             None
         }
 
-        // random replacement policy
-        fn get_replacement(&mut self, location: &CacheLocation) -> &mut CacheLine {
-            &mut self.contents[location.index + rand::thread_rng().gen_range(0..self.associativity)]
+        fn get_write_line(&mut self, location: &CacheLocation) -> &mut CacheLine {
+            for i in (location.index)..(location.index + self.associativity) {
+                if !self.contents[i].valid {
+                    return &mut self.contents[i];
+                }
+            }
+            self.get_replacement(location)
         }
 
-        fn update_set(&mut self, location: &CacheLocation, value: &MemoryValue) {
-            if let MemoryValue::Line(line) = value {
-                self.get_replacement(location).contents = Rc::clone(line);
-            }
+        fn get_replacement(&mut self, location: &CacheLocation) -> &mut CacheLine {
+            &mut self.contents[location.index + rand::thread_rng().gen_range(0..self.associativity)]
         }
     }
 
     impl <'a> memory::Memory for Cache<'a> {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
-            if !self.attempt_access(stage) { return None; }
+            if self.access.attempt_access(stage) {
+                self.access.reset_access_state();
 
-            let location = self.cache_location(addr);
-            match self.get_way(&location, false) {
-                Some(content) =>  {
-                    if line {
-                        Some(MemoryValue::Line(Rc::clone(&content.contents)))
-                    } else {
-                        Some(MemoryValue::Value(content.contents.borrow()[location.offset]))
+                let location = self.cache_location(addr);
+                if let Some(cache_line) = self.get_read_line(&location) {
+                    return match line {
+                        true => Some(memory::MemoryValue::Line(cache_line.contents.clone())),
+                        false => Some(memory::MemoryValue::Value(cache_line.contents[location.offset])),
                     }
-                },
-                None => match &mut self.lower_level {
-                    Some(level) => match level.read(addr, stage, true) {
-                        Some(value) => {
-                            self.update_set(&location, &value);
-                            self.reset_access_state();
-                            if line {
-                                Some(value)
-                            } else {
-                                match value {
-                                    MemoryValue::Line(val) => Some(MemoryValue::Value(val.borrow()[location.index])),
-                                    _ => None
-                                }
-                            }
-                        },
-                        None => None
-                    }
-                    None => None
-                }
+                } 
+                // TODO: Implement lower level read
             }
+            None
         }
 
         fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> Option<()> {
-            if !self.attempt_access(stage) { return None; }
+            if self.access.attempt_access(stage) {
+                self.access.reset_access_state();
 
-            let location = self.cache_location(addr);
-            match self.get_way(&location, true) {
-                Some(content) => {
-                    content.dirty = true;
-                    content.valid = true;
-                    content.tag = location.tag;
-                    match value {
-                        MemoryValue::Value(val) => content.contents.borrow_mut()[location.offset] = val,
-                        MemoryValue::Line(val) => content.contents = val 
-                    };
-                    Some(())
-                },
-                None => None  // No room in cache.  Will be fixed later
+                let location = self.cache_location(addr);
+                let cache_line = self.get_write_line(&location);
+                match value {
+                    MemoryValue::Line(val) => cache_line.contents = val,
+                    MemoryValue::Value(val) => cache_line.contents[location.offset] = val,
+                }
+                cache_line.valid = true;
+                cache_line.dirty = true;
+                cache_line.tag = location.tag;
+                return Some(());
+
+                // TODO: Implement lower level write
             }
+            None
         }
     }
+
 }
