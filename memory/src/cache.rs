@@ -1,6 +1,6 @@
 pub mod cache {
     use crate::memory::{Memory, MemoryValue, MemoryAccess, PipelineStage};
-    use rand::Rng;
+    use xxhash_rust::xxh3::xxh3_64;
 
     #[derive(Debug)]
     struct CacheLocation {
@@ -77,7 +77,9 @@ pub mod cache {
         }
 
         fn get_replacement(&mut self, location: &CacheLocation) -> &mut CacheLine {
-            &mut self.contents[location.index + rand::thread_rng().gen_range(0..self.associativity)]
+            // "random" replacement policy.  It's helpful to get the same "random" number for each location.
+            // will be made less ass later (hopefully)
+            &mut self.contents[location.index + xxh3_64(&[(location.tag ^ location.index) as u8]) as usize % self.associativity]
         }
     }
 
@@ -98,25 +100,22 @@ pub mod cache {
             None
         }
 
-        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> Option<()> {
-            if self.access.attempt_access(stage) {
-                self.access.reset_access_state();
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool {
+            if !self.access.attempt_access(stage) { return false; }
+            self.access.reset_access_state();
 
-                let location = self.cache_location(addr);
-                let cache_line = self.get_write_line(&location);
-                match value {
-                    MemoryValue::Line(val) => cache_line.contents = val,
-                    MemoryValue::Value(val) => cache_line.contents[location.offset] = val,
-                }
-                cache_line.valid = true;
-                cache_line.dirty = true;
-                cache_line.tag = location.tag;
-                return Some(());
+            let location = self.cache_location(addr);
+            let cache_line = self.get_write_line(&location);
 
-                // TODO: Implement lower level write
+            match value {
+                MemoryValue::Line(val) => cache_line.contents = val,
+                MemoryValue::Value(val) => cache_line.contents[location.offset] = val,
             }
-            None
+            cache_line.valid = true;
+            cache_line.dirty = true;
+            cache_line.tag = location.tag;
+            true
         }
-    }
+}
 
 }

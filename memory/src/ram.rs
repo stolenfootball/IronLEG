@@ -43,8 +43,8 @@ pub mod ram {
             }
         }
 
-        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> Option<()> {
-            if !self.access.attempt_access(stage) { return None; }
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool {
+            if !self.access.attempt_access(stage) { return false; }
             self.access.reset_access_state();
 
             let addr = self.addr_to_offset(addr);
@@ -52,7 +52,7 @@ pub mod ram {
                 MemoryValue::Line(val) => self.contents[addr.0] = val,
                 MemoryValue::Value(val) => self.contents[addr.0][addr.1] = val,
             }
-            Some(())
+            true
         }
     }
 }

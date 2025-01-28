@@ -57,7 +57,7 @@ pub mod memory {
 
     pub trait Memory {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue>;
-        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> Option<()>;
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool;
     }
 
   
