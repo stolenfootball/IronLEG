@@ -1,5 +1,5 @@
 pub mod ram {
-    use crate::memory::{self, MemoryValue, PipelineStage, MemoryAccess};
+    use crate::memory::{Memory, MemoryValue, PipelineStage, MemoryAccess};
 
     pub struct RAM {
         size: usize,
@@ -31,15 +31,15 @@ pub mod ram {
 
     }
 
-    impl memory::Memory for RAM {
+    impl Memory for RAM {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
             if !self.access.attempt_access(stage) { return None; }
             self.access.reset_access_state();
 
             let addr = self.addr_to_offset(addr);
             match line {
-                true => Some(memory::MemoryValue::Line(self.contents[addr.0].clone())),
-                false => Some(memory::MemoryValue::Value(self.contents[addr.0][addr.1])),
+                true => Some(MemoryValue::Line(self.contents[addr.0].clone())),
+                false => Some(MemoryValue::Value(self.contents[addr.0][addr.1])),
             }
         }
 

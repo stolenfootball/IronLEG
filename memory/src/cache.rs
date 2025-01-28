@@ -1,5 +1,5 @@
 pub mod cache {
-    use crate::memory::{self, Memory, MemoryValue, MemoryAccess, PipelineStage};
+    use crate::memory::{Memory, MemoryValue, MemoryAccess, PipelineStage};
     use rand::Rng;
 
     #[derive(Debug)]
@@ -81,7 +81,7 @@ pub mod cache {
         }
     }
 
-    impl <'a> memory::Memory for Cache<'a> {
+    impl <'a> Memory for Cache<'a> {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
             if self.access.attempt_access(stage) {
                 self.access.reset_access_state();
@@ -89,8 +89,8 @@ pub mod cache {
                 let location = self.cache_location(addr);
                 if let Some(cache_line) = self.get_read_line(&location) {
                     return match line {
-                        true => Some(memory::MemoryValue::Line(cache_line.contents.clone())),
-                        false => Some(memory::MemoryValue::Value(cache_line.contents[location.offset])),
+                        true => Some(MemoryValue::Line(cache_line.contents.clone())),
+                        false => Some(MemoryValue::Value(cache_line.contents[location.offset])),
                     }
                 } 
                 // TODO: Implement lower level read
