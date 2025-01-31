@@ -11,6 +11,7 @@ pub mod cache {
 
     #[derive(Clone, Debug)]
     struct CacheLine {
+        addr: usize,
         valid: bool,
         dirty: bool,
         tag: usize,
@@ -22,7 +23,7 @@ pub mod cache {
         block_size: usize,
         word_size: usize,
         associativity: usize,
-        lower_level: Option<&'a mut dyn Memory>,
+        pub lower_level: Option<&'a mut dyn Memory>,
         access: MemoryAccess,
         contents: Vec<CacheLine>,
     }
@@ -37,6 +38,7 @@ pub mod cache {
                 lower_level: None,
                 access: MemoryAccess::new(latency, None),
                 contents: vec![CacheLine {
+                    addr: 0,
                     valid: false,
                     dirty: false,
                     tag: 0,
@@ -46,11 +48,11 @@ pub mod cache {
         }
 
         fn align(&self, addr: usize) -> usize {
-            ((addr % self.size) / self.word_size) * self.word_size
+            addr / self.word_size * self.word_size
         }
 
         fn cache_location(&self, addr: usize) -> CacheLocation {
-            let addr = self.align(addr) / self.word_size;
+            let addr = self.align(addr);
             CacheLocation {
                 offset: addr & self.block_size - 1,
                 index: (addr >> usize::ilog2(self.block_size)) * self.associativity % self.size,
@@ -67,53 +69,71 @@ pub mod cache {
             None
         }
 
-        fn get_write_line(&mut self, location: &CacheLocation) -> &mut CacheLine {
+        fn get_write_line_index(&mut self, location: &CacheLocation) -> usize {
+            for i in (location.index)..(location.index + self.associativity) {
+                if self.contents[i].valid && self.contents[i].tag == location.tag {
+                    return i; 
+                }
+            }
+
             for i in (location.index)..(location.index + self.associativity) {
                 if !self.contents[i].valid {
-                    return &mut self.contents[i];
+                    return i;
                 }
             }
             self.get_replacement(location)
         }
 
-        fn get_replacement(&mut self, location: &CacheLocation) -> &mut CacheLine {
+        fn get_replacement(&mut self, location: &CacheLocation) -> usize {
             // "random" replacement policy.  It's helpful to get the same "random" number for each location.
             // will be made less ass later (hopefully)
-            &mut self.contents[location.index + xxh3_64(&[(location.tag ^ location.index) as u8]) as usize % self.associativity]
+            location.index + xxh3_64(&[(location.tag ^ location.index) as u8]) as usize % self.associativity
         }
+
     }
 
     impl <'a> Memory for Cache<'a> {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
-            if self.access.attempt_access(stage) {
-                self.access.reset_access_state();
+            if !self.access.attempt_access(stage) { return None; }
+            self.access.reset_access_state();
 
-                let location = self.cache_location(addr);
-                if let Some(cache_line) = self.get_read_line(&location) {
-                    return match line {
-                        true => Some(MemoryValue::Line(cache_line.contents.clone())),
-                        false => Some(MemoryValue::Value(cache_line.contents[location.offset])),
-                    }
-                } 
-                // TODO: Implement lower level read
-            }
-            None
+            let location = self.cache_location(addr);
+            if let Some(cache_line) = self.get_read_line(&location) {
+                return match line {
+                    true => Some(MemoryValue::Line(cache_line.contents.clone())),
+                    false => Some(MemoryValue::Value(cache_line.contents[location.offset])),
+                }
+            } 
+            // TODO: Implement lower level read
+            Some(MemoryValue::Value(usize::MAX))
         }
 
         fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool {
             if !self.access.attempt_access(stage) { return false; }
-            self.access.reset_access_state();
 
             let location = self.cache_location(addr);
-            let cache_line = self.get_write_line(&location);
+            let cache_line_index = self.get_write_line_index(&location);
 
+            if self.contents[cache_line_index].dirty && self.contents[cache_line_index].tag != location.tag{
+                if let Some(lower_level) = &mut self.lower_level {
+                    if !lower_level.write(self.contents[cache_line_index].addr, MemoryValue::Line(self.contents[cache_line_index].contents.clone()), stage) {
+                        return false;
+                    }
+                    self.contents[cache_line_index].dirty = false;
+                }
+            }
+
+            let cache_line = &mut self.contents[cache_line_index];
             match value {
                 MemoryValue::Line(val) => cache_line.contents = val,
                 MemoryValue::Value(val) => cache_line.contents[location.offset] = val,
             }
+            cache_line.addr = addr;
             cache_line.valid = true;
             cache_line.dirty = true;
             cache_line.tag = location.tag;
+
+            self.access.reset_access_state();
             true
         }
 }

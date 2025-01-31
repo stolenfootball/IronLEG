@@ -13,7 +13,7 @@ pub mod memory {
         Writeback,
     }
 
-#[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum MemoryValue {
         Value(usize),
         Line(Vec<usize>),
