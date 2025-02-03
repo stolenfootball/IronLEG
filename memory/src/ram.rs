@@ -1,5 +1,6 @@
 pub mod ram {
     use crate::memory::{Memory, MemoryValue, PipelineStage, MemoryAccess};
+    use crate::transparency::transparency::Transparency;
 
     pub struct RAM {
         size: usize,
@@ -53,6 +54,16 @@ pub mod ram {
                 MemoryValue::Value(val) => self.contents[addr.0][addr.1] = val,
             }
             true
+        }
+    }
+
+    impl Transparency for RAM {
+        fn peek_line(&self, addr: usize) -> &Vec<usize> {
+            &self.contents[self.align(addr)]
+        }
+
+        fn peek_access(&self) -> &MemoryAccess {
+            &self.access
         }
     }
 }

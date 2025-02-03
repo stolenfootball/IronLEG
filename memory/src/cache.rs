@@ -1,5 +1,6 @@
 pub mod cache {
     use crate::memory::{Memory, MemoryValue, MemoryAccess, PipelineStage};
+    use crate::transparency::transparency::Transparency;
     use xxhash_rust::xxh3::xxh3_64;
 
     #[derive(Debug)]
@@ -156,6 +157,17 @@ pub mod cache {
             self.access.reset_access_state();
             true
         }
-}
+    }
+
+    impl Transparency for Cache<'_> {
+        fn peek_line(&self, addr: usize) -> &Vec<usize> {
+            let location = self.cache_location(addr);
+            &self.contents[location.index].contents
+        }
+
+        fn peek_access(&self) -> &MemoryAccess {
+            &self.access
+        }
+    }
 
 }
