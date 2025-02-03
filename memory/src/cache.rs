@@ -104,8 +104,27 @@ pub mod cache {
                     false => Some(MemoryValue::Value(cache_line.contents[location.offset])),
                 }
             } 
-            // TODO: Implement lower level read
-            Some(MemoryValue::Value(usize::MAX))
+
+            let mut retrieved: Option<MemoryValue> = None;
+            if let Some(lower_level) = &mut self.lower_level {
+                retrieved = lower_level.read(addr, stage, line);
+            } 
+
+            if let Some(data) = &retrieved {
+                let cache_line_index = self.get_write_line_index(&location);
+                let cache_line = &mut self.contents[cache_line_index];
+                cache_line.contents = match data {
+                    MemoryValue::Line(val) => val.clone(),
+                    MemoryValue::Value(val) => vec![*val; self.block_size],
+                };
+                cache_line.addr = addr;
+                cache_line.valid = true;
+                cache_line.dirty = false;
+                cache_line.tag = location.tag;
+                
+            }
+            
+            retrieved
         }
 
         fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool {
@@ -116,7 +135,8 @@ pub mod cache {
 
             if self.contents[cache_line_index].dirty && self.contents[cache_line_index].tag != location.tag{
                 if let Some(lower_level) = &mut self.lower_level {
-                    if !lower_level.write(self.contents[cache_line_index].addr, MemoryValue::Line(self.contents[cache_line_index].contents.clone()), stage) {
+                    let cloned_value = MemoryValue::Line(self.contents[cache_line_index].contents.clone());
+                    if !lower_level.write(self.contents[cache_line_index].addr, cloned_value, stage) {
                         return false;
                     }
                     self.contents[cache_line_index].dirty = false;

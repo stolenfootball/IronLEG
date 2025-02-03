@@ -23,17 +23,19 @@ fn main() {
 }
 
 
-fn read_through(mem: &mut impl Memory, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
+fn read_through(mem: &mut impl Memory, addr: usize, stage: PipelineStage, line: bool) -> (usize, Option<MemoryValue>) {
+    let mut count = 1;
     let mut result = mem.read(addr, stage, line);
     while result.is_none() {
         result = mem.read(addr, stage, line);
+        count += 1;
     }
-    result
+    (count, result)
 }
 
 fn print_through(mem: &mut impl Memory, addr: usize, stage: PipelineStage, line: bool) {
     let result = read_through(mem, addr, stage, line);
-    println!("Read result: {:?}", result.unwrap());
+    println!("Addr: {} | Cycles: {} | Result: {:?}", addr, result.0, result.1.unwrap());
 }
 
 fn write_through(mem: &mut impl Memory, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool {
