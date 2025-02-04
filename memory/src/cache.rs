@@ -24,19 +24,19 @@ pub mod cache {
         block_size: usize,
         word_size: usize,
         associativity: usize,
-        pub lower_level: Option<&'a mut dyn Memory>,
+        pub lower_level: &'a mut dyn Memory,
         access: MemoryAccess,
         contents: Vec<CacheLine>,
     }
 
     impl <'a> Cache<'a> {
-        pub fn new(size: usize, block_size: usize, word_size: usize, latency: i32, associativity: usize) -> Self {
+        pub fn new(size: usize, block_size: usize, word_size: usize, latency: i32, associativity: usize, lower_level: &'a mut dyn Memory) -> Self {
             Self {
                 size: size,
                 block_size: block_size,
                 word_size: word_size,
                 associativity: associativity,
-                lower_level: None,
+                lower_level: lower_level,
                 access: MemoryAccess::new(latency, None),
                 contents: vec![CacheLine {
                     addr: 0,
@@ -106,10 +106,7 @@ pub mod cache {
                 }
             } 
 
-            let mut retrieved: Option<MemoryValue> = None;
-            if let Some(lower_level) = &mut self.lower_level {
-                retrieved = lower_level.read(addr, stage, line);
-            } 
+            let retrieved = self.lower_level.read(addr, stage, line);
 
             if let Some(data) = &retrieved {
                 let cache_line_index = self.get_write_line_index(&location);
@@ -136,13 +133,11 @@ pub mod cache {
             let cache_line_index = self.get_write_line_index(&location);
 
             if self.contents[cache_line_index].dirty && self.contents[cache_line_index].tag != location.tag{
-                if let Some(lower_level) = &mut self.lower_level {
-                    let cloned_value = MemoryValue::Line(self.contents[cache_line_index].contents.clone());
-                    if !lower_level.write(self.contents[cache_line_index].addr, cloned_value, stage) {
-                        return false;
-                    }
-                    self.contents[cache_line_index].dirty = false;
+                let cloned_value = MemoryValue::Line(self.contents[cache_line_index].contents.clone());
+                if !self.lower_level.write(self.contents[cache_line_index].addr, cloned_value, stage) {
+                    return false;
                 }
+                self.contents[cache_line_index].dirty = false;
             }
 
             let cache_line = &mut self.contents[cache_line_index];
