@@ -61,10 +61,10 @@ pub mod cache {
             }
         }
 
-        fn get_read_line(&self, location: &CacheLocation) -> Option<&CacheLine> {
+        fn get_read_line_index(&self, location: &CacheLocation) -> Option<usize> {
             for i in (location.index)..(location.index + self.associativity) {
                 if self.contents[i].valid && self.contents[i].tag == location.tag {
-                    return Some(&self.contents[i]); 
+                    return Some(i); 
                 }
             }
             None
@@ -96,13 +96,13 @@ pub mod cache {
     impl <'a> Memory for Cache<'a> {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
             if !self.access.attempt_access(stage) { return None; }
-            self.access.reset_access_state();
 
             let location = self.cache_location(addr);
-            if let Some(cache_line) = self.get_read_line(&location) {
+            if let Some(cache_line_index) = self.get_read_line_index(&location) {
+                self.access.reset_access_state();
                 return match line {
-                    true => Some(MemoryValue::Line(cache_line.contents.clone())),
-                    false => Some(MemoryValue::Value(cache_line.contents[location.offset])),
+                    true => Some(MemoryValue::Line(self.contents[cache_line_index].contents.clone())),
+                    false => Some(MemoryValue::Value(self.contents[cache_line_index].contents[location.offset])),
                 }
             } 
 
@@ -122,7 +122,8 @@ pub mod cache {
                 cache_line.valid = true;
                 cache_line.dirty = false;
                 cache_line.tag = location.tag;
-                
+
+                self.access.reset_access_state();
             }
             
             retrieved
@@ -160,9 +161,8 @@ pub mod cache {
     }
 
     impl Transparency for Cache<'_> {
-        fn peek_line(&self, addr: usize) -> &Vec<usize> {
-            let location = self.cache_location(addr);
-            &self.contents[location.index].contents
+        fn peek_line(&self, line_num: usize) -> &Vec<usize> {
+            &self.contents[line_num].contents
         }
 
         fn peek_access(&self) -> &MemoryAccess {

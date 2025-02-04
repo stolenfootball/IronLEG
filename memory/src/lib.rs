@@ -44,7 +44,7 @@ pub mod memory {
                         return false; 
                     }
                     self.cycles_to_completion -= 1;
-                    return self.cycles_to_completion <= 1;
+                    return self.cycles_to_completion <= 0;
                 },
                 None => self.stage = Some(attempt_stage)
             }

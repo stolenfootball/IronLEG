@@ -24,7 +24,7 @@ fn main() {
 
 
 fn read_through(mem: &mut impl Memory, addr: usize, stage: PipelineStage, line: bool) -> (usize, Option<MemoryValue>) {
-    let mut count = 1;
+    let mut count = 0;
     let mut result = mem.read(addr, stage, line);
     while result.is_none() {
         result = mem.read(addr, stage, line);
