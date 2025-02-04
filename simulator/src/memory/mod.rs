@@ -1,12 +1,9 @@
 pub mod ram;
 pub mod cache;
-mod transparency;
 
 pub mod memory {
     pub use crate::memory::ram::ram::RAM;
     pub use crate::memory::cache::cache::Cache;
-
-    use crate::memory::transparency::transparency::Transparency;
 
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum PipelineStage {
@@ -57,6 +54,11 @@ pub mod memory {
             self.cycles_to_completion = self.latency;
             self.stage = None;
         }
+    }
+
+    pub trait Transparency {
+        fn peek_line(&self, addr: usize) -> &Vec<usize>;
+        fn peek_access(&self) -> &MemoryAccess;
     }
 
     pub trait Memory: Transparency {

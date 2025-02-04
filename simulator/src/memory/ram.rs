@@ -1,6 +1,6 @@
 pub mod ram {
-    use crate::memory::memory::{Memory, MemoryValue, PipelineStage, MemoryAccess};
-    use crate::memory::transparency::transparency::Transparency;
+    use crate::memory::memory::{Memory, Transparency};
+    use crate::memory::memory::{MemoryValue, PipelineStage, MemoryAccess};
 
     pub struct RAM {
         size: usize,
