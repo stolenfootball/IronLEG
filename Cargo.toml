@@ -3,5 +3,5 @@ resolver = "2"
 
 members = [
     "interface",
-    "memory",
+    "simulator",
 ]

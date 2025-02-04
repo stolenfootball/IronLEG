@@ -1,10 +1,12 @@
 pub mod ram;
 pub mod cache;
-pub mod transparency;
+mod transparency;
+
 pub mod memory {
-    pub use crate::ram::ram::RAM;
-    pub use crate::cache::cache::Cache;
-    pub use crate::transparency::transparency::Transparency;
+    pub use crate::memory::ram::ram::RAM;
+    pub use crate::memory::cache::cache::Cache;
+
+    use crate::memory::transparency::transparency::Transparency;
 
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum PipelineStage {
@@ -61,7 +63,4 @@ pub mod memory {
         fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue>;
         fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool;
     }
-
-
-  
 }

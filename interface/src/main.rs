@@ -1,5 +1,5 @@
-use memory::memory;
-use memory::{Memory, PipelineStage, MemoryValue};
+use simulator::memory::memory;
+use simulator::memory::memory::{Memory, PipelineStage, MemoryValue};
 
 fn main() {
 
