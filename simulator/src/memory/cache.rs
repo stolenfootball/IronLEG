@@ -1,6 +1,6 @@
 pub mod cache {
-    use crate::memory::{Memory, MemoryValue, MemoryAccess, PipelineStage};
-    use crate::transparency::transparency::Transparency;
+    use crate::memory::memory::{Memory, MemoryValue, MemoryAccess, PipelineStage};
+    use crate::memory::transparency::transparency::Transparency;
     use xxhash_rust::xxh3::xxh3_64;
 
     #[derive(Debug)]
