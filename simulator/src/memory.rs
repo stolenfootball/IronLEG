@@ -5,14 +5,7 @@ pub mod memory {
     pub use crate::memory::ram::ram::RAM;
     pub use crate::memory::cache::cache::Cache;
 
-    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-    pub enum PipelineStage {
-        Fetch,
-        Decode,
-        Execute,
-        Memory,
-        Writeback,
-    }
+    pub use crate::PipelineStage;
 
     #[derive(Debug, Clone)]
     pub enum MemoryValue {
