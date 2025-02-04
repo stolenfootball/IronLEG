@@ -106,10 +106,19 @@ pub mod cache {
                 }
             } 
 
+            let cache_line_index = self.get_write_line_index(&location);
+
+            if self.contents[cache_line_index].dirty {
+                let evicted_value = MemoryValue::Line(self.contents[cache_line_index].contents.clone());
+                if !self.lower_level.write(self.contents[cache_line_index].addr, evicted_value, stage) {
+                    return None;
+                }
+                self.contents[cache_line_index].dirty = false;
+            }
+
             let retrieved = self.lower_level.read(addr, stage, line);
 
             if let Some(data) = &retrieved {
-                let cache_line_index = self.get_write_line_index(&location);
                 let cache_line = &mut self.contents[cache_line_index];
                 cache_line.contents = match data {
                     MemoryValue::Line(val) => val.clone(),
