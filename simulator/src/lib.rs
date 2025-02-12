@@ -1,4 +1,5 @@
 pub mod memory;
+pub mod assembler;
 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
