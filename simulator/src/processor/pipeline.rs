@@ -3,7 +3,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use crate::processor::instruction::Instruction;
 use crate::processor::Context;
+use crate::processor::registers::Register;
+use crate::memory::memory::MemoryValue;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum StageType {
     Fetch,
     Decode,
@@ -85,8 +88,15 @@ impl<'a, 'b> Stage<'a, 'b> {
     }
 } 
 
-fn fetch<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, _instr: &mut Instruction) -> bool {
-    true
+fn fetch<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
+    let mut cons = context.borrow_mut();
+    let instr_addr = cons.registers.get_reg(Register::SP) as usize;
+    if let Some(MemoryValue::Value(value)) = cons.memory.read(instr_addr, StageType::Fetch, false) {
+        instr.instr_raw = value as u32;
+        cons.registers.set_reg(Register::SP, (instr_addr + 4) as u32);
+        return true;
+    }
+    false
 }
 
 fn decode<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, _instr: &mut Instruction) -> bool {

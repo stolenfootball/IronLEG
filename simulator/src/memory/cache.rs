@@ -1,6 +1,7 @@
 pub mod cache {
     use crate::memory::memory::{Memory, Transparency};
-    use crate::memory::memory::{MemoryValue, PipelineStage, MemoryAccess};    
+    use crate::memory::memory::{MemoryValue, MemoryAccess};    
+    use crate::processor::pipeline::StageType;
     use xxhash_rust::xxh3::xxh3_64;
 
     #[derive(Debug)]
@@ -94,7 +95,7 @@ pub mod cache {
     }
 
     impl <'a> Memory for Cache<'a> {
-        fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
+        fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue> {
             if !self.access.attempt_access(stage) { return None; }
 
             let location = self.cache_location(addr);
@@ -135,7 +136,7 @@ pub mod cache {
             retrieved
         }
 
-        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool {
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: StageType) -> bool {
             if !self.access.attempt_access(stage) { return false; }
 
             let location = self.cache_location(addr);

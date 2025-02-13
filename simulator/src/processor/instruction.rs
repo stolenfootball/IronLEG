@@ -64,6 +64,7 @@ pub struct InstrMeta {
 
 #[derive(Debug)]
 pub struct Instruction {
+    pub instr_raw: u32,
     pub instr_type: Option<InstrType>,
     pub addr_mode: Option<AddrMode>,
     pub src: Option<Register>,
@@ -75,6 +76,7 @@ pub struct Instruction {
 impl Instruction {
     pub fn new() -> Self {
         Self {
+            instr_raw: 0,
             instr_type: None,
             addr_mode: None,
             src: None,

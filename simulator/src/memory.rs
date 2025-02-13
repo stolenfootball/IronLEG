@@ -4,7 +4,6 @@ pub mod cache;
 pub mod memory {
     pub use crate::memory::ram::ram::RAM;
     pub use crate::memory::cache::cache::Cache;
-
     pub use crate::processor::pipeline::StageType;
 
     #[derive(Debug, Clone)]

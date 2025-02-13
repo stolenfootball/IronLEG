@@ -1,6 +1,7 @@
 pub mod ram {
     use crate::memory::memory::{Memory, Transparency};
-    use crate::memory::memory::{MemoryValue, PipelineStage, MemoryAccess};
+    use crate::memory::memory::{MemoryValue, MemoryAccess};
+    use crate::processor::pipeline::StageType;
 
     pub struct RAM {
         size: usize,
@@ -33,7 +34,7 @@ pub mod ram {
     }
 
     impl Memory for RAM {
-        fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue> {
+        fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue> {
             if !self.access.attempt_access(stage) { return None; }
             self.access.reset_access_state();
 
@@ -44,7 +45,7 @@ pub mod ram {
             }
         }
 
-        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool {
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: StageType) -> bool {
             if !self.access.attempt_access(stage) { return false; }
             self.access.reset_access_state();
 
