@@ -5,7 +5,7 @@ pub mod memory {
     pub use crate::memory::ram::ram::RAM;
     pub use crate::memory::cache::cache::Cache;
 
-    pub use crate::PipelineStage;
+    pub use crate::processor::pipeline::StageType;
 
     #[derive(Debug, Clone)]
     pub enum MemoryValue {
@@ -17,11 +17,11 @@ pub mod memory {
     pub struct MemoryAccess {
         pub latency: i32,
         pub cycles_to_completion: i32,
-        pub stage: Option<PipelineStage>,
+        pub stage: Option<StageType>,
     }
 
     impl MemoryAccess {
-        pub fn new(latency: i32, stage: Option<PipelineStage>) -> Self {
+        pub fn new(latency: i32, stage: Option<StageType>) -> Self {
             Self {
                 latency,
                 cycles_to_completion: latency,
@@ -29,7 +29,7 @@ pub mod memory {
             }
         }
 
-        pub fn attempt_access(&mut self, attempt_stage: PipelineStage) -> bool {
+        pub fn attempt_access(&mut self, attempt_stage: StageType) -> bool {
             match self.stage {
                 Some(current_stage) => {
                     if current_stage != attempt_stage { 
@@ -55,7 +55,7 @@ pub mod memory {
     }
 
     pub trait Memory: Transparency {
-        fn read(&mut self, addr: usize, stage: PipelineStage, line: bool) -> Option<MemoryValue>;
-        fn write(&mut self, addr: usize, value: MemoryValue, stage: PipelineStage) -> bool;
+        fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue>;
+        fn write(&mut self, addr: usize, value: MemoryValue, stage: StageType) -> bool;
     }
 }
