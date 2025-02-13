@@ -6,68 +6,56 @@ pub mod assembler {
         branch::alt,
         sequence::{preceded, terminated},
         combinator::{recognize, value, map_res, map},
-        character::complete::{one_of, char ,digit1},
+        character::complete::{one_of, char, digit1},
         multi::{many0, many1, separated_list1},
     };
 
-    #[derive(Clone, Copy, Debug)]
-    enum InstrType {
-        ALU       = 0b000,
-        Memory    = 0b001,
-        Control   = 0b010,
-        Interrupt = 0b011,
-    }
+    use crate::processor::instruction::{InstrType, AddrMode, 
+                                        ALUType, MemoryType, ControlType, InterruptType};     
 
-    #[derive(Clone, Copy, Debug)]
-    enum AddrMode {
-        Reg = 0b000,
-        Imm = 0b001,
-    }
-
-
-    fn parse_alu(input: &str) -> IResult<&str, (InstrType, u32)> {
+    fn parse_alu(input: &str) -> IResult<&str, InstrType> {
         alt((
-            value((InstrType::ALU, 0b0000), tag("MOV")),
-            value((InstrType::ALU, 0b0001), tag("ADD")),
-            value((InstrType::ALU, 0b0010), tag("SUB")),
-            value((InstrType::ALU, 0b0011), tag("IMUL")),
-            value((InstrType::ALU, 0b0100), tag("IDIV")),
-            value((InstrType::ALU, 0b0101), tag("AND")),
-            value((InstrType::ALU, 0b0110), tag("OR")),
-            value((InstrType::ALU, 0b0111), tag("XOR")),
-            value((InstrType::ALU, 0b1000), tag("CMP")),
-            value((InstrType::ALU, 0b1001), tag("MOD")),
-            value((InstrType::ALU, 0b1010), tag("NOT")),
-            value((InstrType::ALU, 0b1011), tag("LSL")),
-            value((InstrType::ALU, 0b1100), tag("LSR")),
+            value(InstrType::ALU(ALUType::MOV),  tag("MOV")),
+            value(InstrType::ALU(ALUType::ADD),  tag("ADD")),
+            value(InstrType::ALU(ALUType::SUB),  tag("SUB")),
+            value(InstrType::ALU(ALUType::IMUL), tag("IMUL")),
+            value(InstrType::ALU(ALUType::IDIV), tag("IDIV")),
+            value(InstrType::ALU(ALUType::AND),  tag("AND")),
+            value(InstrType::ALU(ALUType::OR),   tag("OR")),
+            value(InstrType::ALU(ALUType::XOR),  tag("XOR")),
+            value(InstrType::ALU(ALUType::CMP),  tag("CMP")),
+            value(InstrType::ALU(ALUType::MOD),  tag("MOD")),
+            value(InstrType::ALU(ALUType::NOT),  tag("NOT")),
+            value(InstrType::ALU(ALUType::LSL),  tag("LSL")),
+            value(InstrType::ALU(ALUType::LSR),  tag("LSR")),
         ))(input)
     }
 
-    fn parse_memory(input: &str) -> IResult<&str, (InstrType, u32)> {
+    fn parse_memory(input: &str) -> IResult<&str, InstrType> {
         alt((
-            value((InstrType::Memory, 0b0000), tag("LDR")),
-            value((InstrType::Memory, 0b0001), tag("STR")),
+            value(InstrType::Memory(MemoryType::LDR), tag("LDR")),
+            value(InstrType::Memory(MemoryType::STR), tag("STR")),
         ))(input)
     }
 
-    fn parse_control(input: &str) -> IResult<&str, (InstrType, u32)> {
+    fn parse_control(input: &str) -> IResult<&str, InstrType> {
         alt((
-            value((InstrType::Control, 0b0000), tag("BEQ")),
-            value((InstrType::Control, 0b0001), tag("BLT")),
-            value((InstrType::Control, 0b0010), tag("BGT")),
-            value((InstrType::Control, 0b0011), tag("BNE")),
-            value((InstrType::Control, 0b0100), tag("B")),
-            value((InstrType::Control, 0b0101), tag("CALL")),
-            value((InstrType::Control, 0b0110), tag("RET")),
-            value((InstrType::Control, 0b0111), tag("BGE")),
-            value((InstrType::Control, 0b1000), tag("BLE")),
+            value(InstrType::Control(ControlType::BEQ),  tag("BEQ")),
+            value(InstrType::Control(ControlType::BLT),  tag("BLT")),
+            value(InstrType::Control(ControlType::BGT),  tag("BGT")),
+            value(InstrType::Control(ControlType::BNE),  tag("BNE")),
+            value(InstrType::Control(ControlType::B),    tag("B")),
+            value(InstrType::Control(ControlType::CALL), tag("CALL")),
+            value(InstrType::Control(ControlType::RET),  tag("RET")),
+            value(InstrType::Control(ControlType::BGE),  tag("BGE")),
+            value(InstrType::Control(ControlType::BLE),  tag("BLE")),
         ))(input)
     }
 
-    fn parse_interrupt(input: &str) -> IResult<&str, (InstrType, u32)> {
+    fn parse_interrupt(input: &str) -> IResult<&str, InstrType> {
         alt((
-            value((InstrType::Interrupt, 0b0000), tag("NOP")),
-            value((InstrType::Interrupt, 0b0001), tag("HLT")),
+            value(InstrType::Interrupt(InterruptType::NOP), tag("NOP")),
+            value(InstrType::Interrupt(InterruptType::HLT), tag("HLT")),
         ))(input)
     }
 
@@ -117,20 +105,20 @@ pub mod assembler {
         separated_list1(tag(","), alt((parse_regs, parse_nums)))(input)
     }
 
-    pub fn parse_line(input: &str) -> u32 {
-        let (input, (instr_type, opcode)) = alt((parse_alu, parse_memory, parse_control, parse_interrupt))(input).unwrap();
-        let input = input.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+    // pub fn parse_line(input: &str) -> u32 {
+    //     let (input, (instr_type, opcode)) = alt((parse_alu, parse_memory, parse_control, parse_interrupt))(input).unwrap();
+    //     let input = input.chars().filter(|c| !c.is_whitespace()).collect::<String>();
         
-        let (_, regs) = parse_comma_sep(&input).unwrap();
+    //     let (_, regs) = parse_comma_sep(&input).unwrap();
         
-        let addr_type = regs.iter().map(|(mode, _)| *mode as u32).fold(0, |acc, x| acc << 1 | x);
+    //     let addr_type = regs.iter().map(|(mode, _)| *mode as u32).fold(0, |acc, x| acc << 1 | x);
 
-        let output = (instr_type as u32) << 29 | opcode << 25 | addr_type << 22;
-        match addr_type {
-            0b000 => output | regs.iter().map(|(_, val)| val).fold(0, |acc, x| acc << 4 | x) << 16,
-            _ => output | regs.iter().map(|(_, val)| val).fold(0, |acc, x| acc << 16 | x),
-        }
-    }
+    //     let output = (instr_type as u32) << 29 | opcode << 25 | addr_type << 22;
+    //     match addr_type {
+    //         0b000 => output | regs.iter().map(|(_, val)| val).fold(0, |acc, x| acc << 4 | x) << 16,
+    //         _ => output | regs.iter().map(|(_, val)| val).fold(0, |acc, x| acc << 16 | x),
+    //     }
+    // }
 
 
 }
