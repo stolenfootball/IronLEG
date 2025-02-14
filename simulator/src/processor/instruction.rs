@@ -139,12 +139,12 @@ pub struct InstrMeta {
 #[derive(Debug)]
 pub struct Instruction {
     pub instr_raw: u32,
-    pub instr_type: Option<InstrType>,
-    pub addr_mode: Option<AddrMode>,
-    pub reg_1: Option<Register>,
-    pub reg_2: Option<Register>,
-    pub dest: Option<Register>,
-    pub imm: Option<u32>,
+    pub instr_type: InstrType,
+    pub addr_mode: AddrMode,
+    pub reg_1: Register,
+    pub reg_2: Register,
+    pub dest: Register,
+    pub imm: u32,
     pub meta: InstrMeta,
 }
 
@@ -152,14 +152,14 @@ impl Instruction {
     pub fn new() -> Self {
         Self {
             instr_raw: 0,
-            instr_type: None,
-            addr_mode: None,
-            reg_1: None,
-            reg_2: None,
-            dest: None,
-            imm: None,
+            instr_type: InstrType::ALU(ALUType::MOV),
+            addr_mode: AddrMode::RegReg,
+            reg_1: Register::R0,
+            reg_2: Register::R0,
+            dest: Register::R0,
+            imm: 0,
             meta: InstrMeta {
-                writeback: false,
+                writeback: true,
                 squashed: false,
                 result: 0,
             },
@@ -167,22 +167,22 @@ impl Instruction {
     }
 
     pub fn get_arg_1(&self, regs: &Registers) -> u32 {
-        match self.addr_mode.unwrap() {
-            AddrMode::RegReg => regs.get_reg(self.reg_1.unwrap()),
-            AddrMode::RegRegOff => regs.get_reg(self.reg_1.unwrap()),
-            AddrMode::RegImm => regs.get_reg(self.reg_1.unwrap()),
-            AddrMode::Imm => self.imm.unwrap(),
-            AddrMode::Reg => regs.get_reg(self.reg_1.unwrap()),
+        match self.addr_mode {
+            AddrMode::RegReg => regs.get_reg(self.reg_1),
+            AddrMode::RegRegOff => regs.get_reg(self.reg_1),
+            AddrMode::RegImm => regs.get_reg(self.reg_1),
+            AddrMode::Imm => self.imm,
+            AddrMode::Reg => regs.get_reg(self.reg_1),
         }
     }
 
     pub fn get_arg_2(&self, regs: &Registers) -> u32 {
-        match self.addr_mode.unwrap() {
-            AddrMode::RegReg => regs.get_reg(self.reg_2.unwrap()),
-            AddrMode::RegRegOff => regs.get_reg(self.reg_2.unwrap()),
-            AddrMode::RegImm => self.imm.unwrap(),
+        match self.addr_mode {
+            AddrMode::RegReg => regs.get_reg(self.reg_2),
+            AddrMode::RegRegOff => regs.get_reg(self.reg_2),
+            AddrMode::RegImm => self.imm,
             AddrMode::Imm => 0,
-            AddrMode::Reg => regs.get_reg(self.reg_1.unwrap()),
+            AddrMode::Reg => regs.get_reg(self.reg_1),
         }
     }
 }

@@ -106,86 +106,86 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
 
     let opcode = (raw >> 25) & 0xF;
     instr.instr_type = match raw >> 29 {
-        0b000 => Some(InstrType::ALU(ALUType::from_u32(opcode))),
-        0b001 => Some(InstrType::Memory(MemoryType::from_u32(opcode))),
-        0b010 => Some(InstrType::Control(ControlType::from_u32(opcode))),
-        0b011 => Some(InstrType::Interrupt(InterruptType::from_u32(opcode))),
+        0b000 => InstrType::ALU(ALUType::from_u32(opcode)),
+        0b001 => InstrType::Memory(MemoryType::from_u32(opcode)),
+        0b010 => InstrType::Control(ControlType::from_u32(opcode)),
+        0b011 => InstrType::Interrupt(InterruptType::from_u32(opcode)),
         _ => panic!("balls")
     };
     
-    instr.addr_mode = Some(AddrMode::from_u32((raw >> 22) & 0x7));
+    instr.addr_mode = AddrMode::from_u32((raw >> 22) & 0x7);
 
 
     let regs = &mut context.borrow_mut().registers;
-    match instr.addr_mode.unwrap() {
+    match instr.addr_mode {
         AddrMode::RegReg => {
-            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
-            instr.reg_2 = Some(Register::from_u32((raw >> 14) & 0xF));
+            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
+            instr.reg_2 = Register::from_u32((raw >> 14) & 0xF);
             instr.dest = instr.reg_1;
 
-            if regs.is_in_use(instr.reg_1.unwrap()) || regs.is_in_use(instr.reg_2.unwrap()) {
+            if regs.is_in_use(instr.reg_1) || regs.is_in_use(instr.reg_2) {
                 return false;
             }
         },
         AddrMode::RegRegOff => {
-            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
-            instr.reg_2 = Some(Register::from_u32((raw >> 14) & 0xF));
-            instr.imm = Some(raw & 0xFFFF);
+            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
+            instr.reg_2 = Register::from_u32((raw >> 14) & 0xF);
+            instr.imm = raw & 0xFFFF;
             instr.dest = instr.reg_1;
 
-            if regs.is_in_use(instr.reg_1.unwrap()) || regs.is_in_use(instr.reg_2.unwrap()) {
+            if regs.is_in_use(instr.reg_1) || regs.is_in_use(instr.reg_2) {
                 return false;
             }
         },
         AddrMode::RegImm => {
-            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
-            instr.imm = Some(raw & 0xFFF);
+            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
+            instr.imm = raw & 0xFFF;
             instr.dest = instr.reg_1;
 
-            if regs.is_in_use(instr.reg_1.unwrap()) {
+            if regs.is_in_use(instr.reg_1) {
                 return false;
             }
         },
         AddrMode::Imm => {
-            instr.imm = Some(raw & 0x3FFFFF)
+            instr.imm = raw & 0x3FFFFF
         },
         AddrMode::Reg => {
-            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
+            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
             instr.dest = instr.reg_1;
 
-            if regs.is_in_use(instr.reg_1.unwrap()) {
+            if regs.is_in_use(instr.reg_1) {
                 return false;
             }
         },
     }
 
-    if let Some(InstrType::ALU(value)) = instr.instr_type {
+    if let InstrType::ALU(value) = instr.instr_type {
         if value == ALUType::CMP {
-            instr.dest = Some(Register::BF);
+            instr.dest = Register::BF;
         }
     }
 
-    if let Some(InstrType::Control(_)) = instr.instr_type {
+    if let InstrType::Control(_) = instr.instr_type {
         if regs.is_in_use(Register::BF) { return false; }
-        instr.dest = Some(Register::PC);
+        instr.dest = Register::PC;
     }
             
-    regs.set_in_use(instr.dest.unwrap(), true);
+    regs.set_in_use(instr.dest, true);
     true
 }
 
 fn execute<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
-    match instr.instr_type.unwrap() {
-        InstrType::ALU(alu_type) => true,
-        InstrType::Control(ctrl_type) => true,
-        InstrType::Memory(mem_type) => true,
-        InstrType::Interrupt(int_type) => true,
+    match instr.instr_type {
+        InstrType::ALU(_alu_type) => true,
+        InstrType::Control(_ctrl_type) => true,
+        InstrType::Memory(_mem_type) => true,
+        InstrType::Interrupt(_int_type) => true,
     }
 }
 
 fn memory<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
     let ctx = &mut context.borrow_mut();
-    if let Some(InstrType::Memory(mem_type)) = instr.instr_type  {
+    if let InstrType::Memory(mem_type) = instr.instr_type  {
         let mem_addr = instr.get_arg_2(&ctx.registers) as usize;
         return match mem_type {
             MemoryType::LDR => {
