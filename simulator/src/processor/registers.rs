@@ -18,6 +18,30 @@ pub enum Register {
     PC,
 }
 
+impl Register {
+    pub fn from_u32(reg: u32) -> Register {
+        match reg {
+            00 => Register::R0,
+            01 => Register::R1,
+            02 => Register::R2,
+            03 => Register::R3,
+            04 => Register::R4,
+            05 => Register::R5,
+            06 => Register::R6,
+            07 => Register::R7,
+            08 => Register::R8,
+            09 => Register::R9,
+            10 => Register::R10,
+            11 => Register::R11,
+            12 => Register::SP,
+            13 => Register::BF,
+            14 => Register::LR,
+            15 => Register::PC,
+            _ => panic!("Register convert failure: {}", reg)
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Registers {
     pub registers: [u32; 16],

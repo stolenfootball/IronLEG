@@ -6,6 +6,8 @@ use crate::processor::Context;
 use crate::processor::registers::Register;
 use crate::memory::memory::MemoryValue;
 
+use super::instruction::{ALUType, AddrMode, ControlType, InstrType, InterruptType, MemoryType};
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum StageType {
     Fetch,
@@ -99,7 +101,76 @@ fn fetch<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction)
     false
 }
 
-fn decode<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, _instr: &mut Instruction) -> bool {
+fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
+    let raw = instr.instr_raw;
+
+    let opcode = (raw >> 25) & 0xF;
+    instr.instr_type = match raw >> 29 {
+        0b000 => Some(InstrType::ALU(ALUType::from_u32(opcode))),
+        0b001 => Some(InstrType::Memory(MemoryType::from_u32(opcode))),
+        0b010 => Some(InstrType::Control(ControlType::from_u32(opcode))),
+        0b011 => Some(InstrType::Interrupt(InterruptType::from_u32(opcode))),
+        _ => panic!("balls")
+    };
+    
+    instr.addr_mode = Some(AddrMode::from_u32((raw >> 22) & 0x7));
+
+
+    let regs = &mut context.borrow_mut().registers;
+    match instr.addr_mode.unwrap() {
+        AddrMode::RegReg => {
+            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
+            instr.reg_2 = Some(Register::from_u32((raw >> 14) & 0xF));
+            instr.dest = instr.reg_1;
+
+            if regs.is_in_use(instr.reg_1.unwrap()) || regs.is_in_use(instr.reg_2.unwrap()) {
+                return false;
+            }
+        },
+        AddrMode::RegRegOff => {
+            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
+            instr.reg_2 = Some(Register::from_u32((raw >> 14) & 0xF));
+            instr.imm = Some(raw & 0xFFFF);
+            instr.dest = instr.reg_1;
+
+            if regs.is_in_use(instr.reg_1.unwrap()) || regs.is_in_use(instr.reg_2.unwrap()) {
+                return false;
+            }
+        },
+        AddrMode::RegImm => {
+            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
+            instr.imm = Some(raw & 0xFFF);
+            instr.dest = instr.reg_1;
+
+            if regs.is_in_use(instr.reg_1.unwrap()) {
+                return false;
+            }
+        },
+        AddrMode::Imm => {
+            instr.imm = Some(raw & 0x3FFFFF)
+        },
+        AddrMode::Reg => {
+            instr.reg_1 = Some(Register::from_u32((raw >> 18) & 0xF));
+            instr.dest = instr.reg_1;
+
+            if regs.is_in_use(instr.reg_1.unwrap()) {
+                return false;
+            }
+        },
+    }
+
+    if let Some(InstrType::ALU(value)) = instr.instr_type {
+        if value == ALUType::CMP {
+            instr.dest = Some(Register::BF);
+        }
+    }
+
+    if let Some(InstrType::Control(_)) = instr.instr_type {
+        if regs.is_in_use(Register::BF) { return false; }
+        instr.dest = Some(Register::PC);
+    }
+            
+    regs.set_in_use(instr.dest.unwrap(), true);
     true
 }
 
