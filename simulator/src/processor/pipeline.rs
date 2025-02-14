@@ -183,7 +183,27 @@ fn execute<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instructi
     }
 }
 
-fn memory<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, _instr: &mut Instruction) -> bool {
+fn memory<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
+    let ctx = &mut context.borrow_mut();
+    if let Some(InstrType::Memory(mem_type)) = instr.instr_type  {
+        let mem_addr = instr.get_arg_2(&ctx.registers) as usize;
+        return match mem_type {
+            MemoryType::LDR => {
+                if let Some(MemoryValue::Value(response)) = ctx.memory.read(mem_addr, StageType::Memory, false) {
+                    instr.meta.result = response as u32;
+                }
+                false
+            },
+            MemoryType::STR => {
+                let val_to_store = instr.get_arg_1(&ctx.registers) as usize;
+                if ctx.memory.write(mem_addr, MemoryValue::Value(val_to_store), StageType::Memory) {
+                    instr.meta.writeback = false;
+                    return true;
+                }
+                false
+            },
+        }
+    }
     true
 }
 

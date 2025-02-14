@@ -1,5 +1,5 @@
 
-use crate::processor::registers::Register;
+use crate::processor::registers::{Register, Registers};
 
 #[derive(Clone, Copy, Debug)]
 pub enum InstrType {
@@ -133,6 +133,7 @@ impl InterruptType {
 pub struct InstrMeta {
     pub writeback: bool,
     pub squashed: bool,
+    pub result: u32,
 }
 
 #[derive(Debug)]
@@ -160,7 +161,28 @@ impl Instruction {
             meta: InstrMeta {
                 writeback: false,
                 squashed: false,
+                result: 0,
             },
+        }
+    }
+
+    pub fn get_arg_1(&self, regs: &Registers) -> u32 {
+        match self.addr_mode.unwrap() {
+            AddrMode::RegReg => regs.get_reg(self.reg_1.unwrap()),
+            AddrMode::RegRegOff => regs.get_reg(self.reg_1.unwrap()),
+            AddrMode::RegImm => regs.get_reg(self.reg_1.unwrap()),
+            AddrMode::Imm => self.imm.unwrap(),
+            AddrMode::Reg => regs.get_reg(self.reg_1.unwrap()),
+        }
+    }
+
+    pub fn get_arg_2(&self, regs: &Registers) -> u32 {
+        match self.addr_mode.unwrap() {
+            AddrMode::RegReg => regs.get_reg(self.reg_2.unwrap()),
+            AddrMode::RegRegOff => regs.get_reg(self.reg_2.unwrap()),
+            AddrMode::RegImm => self.imm.unwrap(),
+            AddrMode::Imm => 0,
+            AddrMode::Reg => regs.get_reg(self.reg_1.unwrap()),
         }
     }
 }
