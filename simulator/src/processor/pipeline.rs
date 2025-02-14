@@ -174,8 +174,13 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
     true
 }
 
-fn execute<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, _instr: &mut Instruction) -> bool {
-    true
+fn execute<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
+    match instr.instr_type.unwrap() {
+        InstrType::ALU(alu_type) => true,
+        InstrType::Control(ctrl_type) => true,
+        InstrType::Memory(mem_type) => true,
+        InstrType::Interrupt(int_type) => true,
+    }
 }
 
 fn memory<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, _instr: &mut Instruction) -> bool {
