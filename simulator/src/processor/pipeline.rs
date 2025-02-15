@@ -37,19 +37,7 @@ pub struct Stage<'a, 'b> {
 }
 
 impl<'a, 'b> Stage<'a, 'b> {
-    pub fn create(context: Rc<RefCell<&'a mut Context<'a>>>, stage_type: StageType, prev_stage: Option<&'a mut Stage<'a, 'b>>) -> Stage<'a, 'b> {
-        match stage_type {
-            StageType::Fetch => Stage::new(context, fetch, prev_stage),
-            StageType::Decode => Stage::new(context, decode, prev_stage),
-            StageType::Execute => Stage::new(context, execute, prev_stage),
-            StageType::Memory => Stage::new(context, memory, prev_stage),
-            StageType::Writeback => Stage::new(context, writeback, prev_stage),
-        }
-    }
-
-    fn new(context: Rc<RefCell<&'a mut Context<'a>>>, 
-           process: fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
-           prev_stage: Option<&'a mut Stage<'a, 'b>>) -> Stage<'a, 'b> {
+    pub fn create(context: Rc<RefCell<&'a mut Context<'a>>>, stage_type: StageType) -> Stage<'a, 'b> {
         Stage {
             status: StageStatus {
                 finished: false,
@@ -57,9 +45,20 @@ impl<'a, 'b> Stage<'a, 'b> {
             },
             instruction: None,
             context: context,
-            prev_stage: prev_stage,
-            process: process,
+            prev_stage: None,
+            process: match stage_type {
+                StageType::Fetch => fetch as fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
+                StageType::Decode => decode as fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
+                StageType::Execute => execute as fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
+                StageType::Memory => memory as fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
+                StageType::Writeback => writeback as fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
+            },
         }
+        
+    }
+
+    pub fn set_prev(&mut self, prev_stage: &'a mut Stage<'a, 'b>) {
+        self.prev_stage = Some(prev_stage)
     }
 
     fn transfer(&mut self) -> Option<Instruction> {

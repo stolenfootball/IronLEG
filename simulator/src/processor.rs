@@ -1,9 +1,9 @@
-use std::rc::Rc;
-use std::cell::RefCell;
+// use std::rc::Rc;
+// use std::cell::RefCell;
 
 use crate::memory::memory::Memory;
 use crate::processor::registers::Registers;
-use crate::processor::pipeline::{Stage, StageType};
+// use crate::processor::pipeline::{Stage, StageType};
 
 pub mod instruction;
 pub mod registers;
@@ -15,7 +15,11 @@ pub struct Context<'a> {
 }
 
 // pub struct Processor<'a, 'b> {
-//     pipeline: Box<Stage<'a, 'b>>,
+//     fetch_stage: Stage<'a, 'b>,
+//     decode_stage: Stage<'a, 'b>,
+//     execute_stage: Stage<'a, 'b>,
+//     memory_stage: Stage<'a, 'b>,
+//     writeback_stage: Stage<'a, 'b>,
 //     context: Box<Rc<RefCell<&'a mut Context<'a>>>>,
 // }
 
@@ -28,17 +32,22 @@ pub struct Context<'a> {
 //             registers: Box::new(&mut registers),
 //         };
 //         let mut context = Box::new(Rc::new(RefCell::new(&mut context)));
-    
-//         let mut fetch_stage = Box::new(Stage::create(Rc::clone(&mut context), StageType::Fetch, None));
-//         let mut decode_stage = Box::new(Stage::create(Rc::clone(&mut context), StageType::Decode, Some(Box::new(fetch_stage))));
-//         let mut execute_stage = Box::new(Stage::create(Rc::clone(&mut context), StageType::Execute, Some(decode_stage)));
-//         let mut memory_stage = Box::new(Stage::create(Rc::clone(&mut context), StageType::Memory, Some(execute_stage)));
-//         let writeback_stage = Box::new(Stage::create(Rc::clone(&mut context), StageType::Writeback, Some(memory_stage)));
 
-//         Processor {
-//             context: context,
-//             pipeline: writeback_stage,
-//         }
+//         let mut proc = Processor {
+//             context,
+//             fetch_stage: Stage::create(Rc::clone(&mut context), StageType::Fetch),
+//             decode_stage: Stage::create(Rc::clone(&mut context), StageType::Decode),
+//             execute_stage: Stage::create(Rc::clone(&mut context), StageType::Execute),
+//             memory_stage: Stage::create(Rc::clone(&mut context), StageType::Memory),
+//             writeback_stage: Stage::create(Rc::clone(&mut context), StageType::Writeback),
+//         };
 
+//         proc.decode_stage.set_prev(&mut proc.fetch_stage);
+//         proc.execute_stage.set_prev(&mut proc.decode_stage);
+//         proc.memory_stage.set_prev(&mut proc.execute_stage);
+//         proc.writeback_stage.set_prev(&mut proc.memory_stage);
+
+
+//         proc
 //     }
 // }

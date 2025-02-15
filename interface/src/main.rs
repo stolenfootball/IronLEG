@@ -16,11 +16,16 @@ fn main() {
     };
     let mut context = Rc::new(RefCell::new(&mut context));
 
-    let mut fetch_stage = Stage::create(Rc::clone(&mut context), StageType::Fetch, None);
-    let mut decode_stage = Stage::create(Rc::clone(&mut context), StageType::Decode, Some(&mut fetch_stage));
-    let mut execute_stage = Stage::create(Rc::clone(&mut context), StageType::Execute, Some(&mut decode_stage));
-    let mut memory_stage = Stage::create(Rc::clone(&mut context), StageType::Memory, Some(&mut execute_stage));
-    let mut writeback_stage = Stage::create(Rc::clone(&mut context), StageType::Writeback, Some(&mut memory_stage));
+    let mut fetch_stage = Stage::create(Rc::clone(&mut context), StageType::Fetch);
+    let mut decode_stage = Stage::create(Rc::clone(&mut context), StageType::Decode);
+    let mut execute_stage = Stage::create(Rc::clone(&mut context), StageType::Execute);
+    let mut memory_stage = Stage::create(Rc::clone(&mut context), StageType::Memory);
+    let mut writeback_stage = Stage::create(Rc::clone(&mut context), StageType::Writeback);
+
+    decode_stage.set_prev(&mut fetch_stage);
+    execute_stage.set_prev(&mut decode_stage);
+    memory_stage.set_prev(&mut execute_stage);
+    writeback_stage.set_prev(&mut memory_stage);
 
     for _ in 0..100 {
         writeback_stage.cycle();
