@@ -163,6 +163,11 @@ pub mod cache {
             self.access.reset_access_state();
             true
         }
+
+        fn reset_state(&mut self) {
+            self.lower_level.reset_state();
+            self.access.reset_access_state();
+        }
     }
 
     impl Transparency for Cache<'_> {

@@ -17,6 +17,12 @@ pub enum StageType {
     Writeback,
 }
 
+enum StageResult {
+    DONE,
+    WAIT,
+    SQUASH,
+}
+
 struct StageStatus {
     finished: bool,
     pipeline_on: bool,
@@ -27,7 +33,7 @@ pub struct Stage<'a, 'b> {
     instruction: Option<Instruction>,
     context: Rc<RefCell<&'a mut Context<'a>>>,
     prev_stage: Option<&'a mut Stage<'a, 'b>>,
-    process: fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> bool,
+    process: fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
 }
 
 impl<'a, 'b> Stage<'a, 'b> {
@@ -42,7 +48,7 @@ impl<'a, 'b> Stage<'a, 'b> {
     }
 
     fn new(context: Rc<RefCell<&'a mut Context<'a>>>, 
-           process: fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> bool,
+           process: fn(Rc<RefCell<&'a mut Context<'a>>>, &mut Instruction) -> StageResult,
            prev_stage: Option<&'a mut Stage<'a, 'b>>) -> Stage<'a, 'b> {
         Stage {
             status: StageStatus {
@@ -76,12 +82,28 @@ impl<'a, 'b> Stage<'a, 'b> {
         };
     }
 
+    pub fn squash(&mut self) {
+        if let Some(instr) = &mut self.instruction {
+            instr.meta.squashed = true;
+        }
+        if let Some(prev_stage) = &mut self.prev_stage {
+            prev_stage.squash();
+        }
+    }
+
     pub fn cycle(&mut self) {
         self.load();
         if let Some(instr) = &mut self.instruction {
             if instr.meta.squashed { self.status.finished = true; }
             if !self.status.finished { 
-                self.status.finished = (self.process)(Rc::clone(&self.context), instr);
+                self.status.finished = match (self.process)(Rc::clone(&self.context), instr) {
+                    StageResult::DONE => true,
+                    StageResult::WAIT => false,
+                    StageResult::SQUASH => {
+                        self.squash();
+                        true
+                    }
+                }
             }
         }
         if let Some(prev) = &mut self.prev_stage {
@@ -90,18 +112,18 @@ impl<'a, 'b> Stage<'a, 'b> {
     }
 } 
 
-fn fetch<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
-    let mut cons = context.borrow_mut();
-    let instr_addr = cons.registers.get_reg(Register::SP) as usize;
-    if let Some(MemoryValue::Value(value)) = cons.memory.read(instr_addr, StageType::Fetch, false) {
+fn fetch<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> StageResult {
+    let mut ctx = context.borrow_mut();
+    let instr_addr = ctx.registers.get_reg(Register::SP) as usize;
+    if let Some(MemoryValue::Value(value)) = ctx.memory.read(instr_addr, StageType::Fetch, false) {
         instr.instr_raw = value as u32;
-        cons.registers.set_reg(Register::SP, (instr_addr + 4) as u32);
-        return true;
+        ctx.registers.set_reg(Register::SP, (instr_addr + 4) as u32);
+        return StageResult::DONE;
     }
-    false
+    StageResult::WAIT
 }
 
-fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
+fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> StageResult {
     let raw = instr.instr_raw;
 
     let opcode = (raw >> 25) & 0xF;
@@ -124,7 +146,7 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
             instr.dest = instr.reg_1;
 
             if regs.is_in_use(instr.reg_1) || regs.is_in_use(instr.reg_2) {
-                return false;
+                return StageResult::WAIT;
             }
         },
         AddrMode::RegRegOff => {
@@ -134,7 +156,7 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
             instr.dest = instr.reg_1;
 
             if regs.is_in_use(instr.reg_1) || regs.is_in_use(instr.reg_2) {
-                return false;
+                return StageResult::WAIT;
             }
         },
         AddrMode::RegImm => {
@@ -143,7 +165,7 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
             instr.dest = instr.reg_1;
 
             if regs.is_in_use(instr.reg_1) {
-                return false;
+                return StageResult::WAIT;
             }
         },
         AddrMode::Imm => {
@@ -154,7 +176,7 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
             instr.dest = instr.reg_1;
 
             if regs.is_in_use(instr.reg_1) {
-                return false;
+                return StageResult::WAIT;
             }
         },
     }
@@ -166,25 +188,25 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
     }
 
     if let InstrType::Control(_) = instr.instr_type {
-        if regs.is_in_use(Register::BF) { return false; }
+        if regs.is_in_use(Register::BF) { return StageResult::WAIT; }
         instr.dest = Register::PC;
     }
             
     regs.set_in_use(instr.dest, true);
-    true
+    StageResult::DONE
 }
 
-fn execute<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
+fn execute<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> StageResult {
     match instr.instr_type {
-        InstrType::ALU(_alu_type) => true,
-        InstrType::Control(_ctrl_type) => true,
-        InstrType::Memory(_mem_type) => true,
-        InstrType::Interrupt(_int_type) => true,
+        InstrType::ALU(_alu_type) => StageResult::DONE,
+        InstrType::Control(_ctrl_type) => StageResult::DONE,
+        InstrType::Memory(_mem_type) => StageResult::DONE,
+        InstrType::Interrupt(_int_type) => StageResult::DONE,
     }
 }
 
-fn memory<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> bool {
-    let ctx = &mut context.borrow_mut();
+fn memory<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> StageResult {
+    let mut ctx = context.borrow_mut();
     if let InstrType::Memory(mem_type) = instr.instr_type  {
         let mem_addr = instr.get_arg_2(&ctx.registers) as usize;
         return match mem_type {
@@ -192,21 +214,34 @@ fn memory<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
                 if let Some(MemoryValue::Value(response)) = ctx.memory.read(mem_addr, StageType::Memory, false) {
                     instr.meta.result = response as u32;
                 }
-                false
+                StageResult::WAIT
             },
             MemoryType::STR => {
                 let val_to_store = instr.get_arg_1(&ctx.registers) as usize;
                 if ctx.memory.write(mem_addr, MemoryValue::Value(val_to_store), StageType::Memory) {
                     instr.meta.writeback = false;
-                    return true;
+                    return StageResult::DONE;
                 }
-                false
+                StageResult::WAIT
             },
         }
     }
-    true
+    StageResult::DONE
 }
 
-fn writeback<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, _instr: &mut Instruction) -> bool {
-    true
+fn writeback<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> StageResult {
+    let mut ctx = context.borrow_mut();
+    if instr.meta.writeback {
+        ctx.registers.set_reg(instr.dest, instr.meta.result);
+    }
+    ctx.registers.set_in_use(instr.dest, false);
+
+    if instr.meta.writeback {
+        if let InstrType::Control(_) = instr.instr_type {
+            ctx.registers.clear_in_use();
+            ctx.memory.reset_state();
+            return StageResult::SQUASH;
+        }
+    }   
+    StageResult::DONE
 }

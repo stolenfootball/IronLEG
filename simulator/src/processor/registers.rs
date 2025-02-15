@@ -71,5 +71,9 @@ impl Registers {
     pub fn is_in_use(&self, reg: Register) -> bool {
         self.in_use[reg as usize]
     }
+
+    pub fn clear_in_use(&mut self) {
+        self.in_use.iter_mut().for_each(|x| *x = false);
+    }
 }
 

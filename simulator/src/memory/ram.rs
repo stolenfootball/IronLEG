@@ -56,6 +56,10 @@ pub mod ram {
             }
             true
         }
+
+        fn reset_state(&mut self) {
+            self.access.reset_access_state();
+        }
     }
 
     impl Transparency for RAM {
