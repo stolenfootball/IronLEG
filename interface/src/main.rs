@@ -1,12 +1,22 @@
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::fs;
 
 use simulator::processor::pipeline::{Stage, StageType};
 use simulator::processor::registers::Registers;
 use simulator::processor;
-use simulator::memory::memory;
+use simulator::memory;
+
+use simulator::assembler;
 
 fn main() {
+    let asm = fs::read_to_string("./test/test.leg").unwrap();
+    let parsed = assembler::assemble(&asm);
+    println!("{:?}", parsed);
+}
+
+
+fn _test_sim() {
     let mut mem = memory::RAM::new(4096, 16, 4, 5);
     let mut registers = Registers::new();
 
