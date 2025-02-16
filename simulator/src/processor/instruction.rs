@@ -1,5 +1,5 @@
 
-use crate::processor::registers::{Register, Registers};
+use super::registers::{Register, Registers};
 
 #[derive(Clone, Copy, Debug)]
 pub enum InstrType {

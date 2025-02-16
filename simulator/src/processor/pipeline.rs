@@ -1,11 +1,12 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::processor::instruction::Instruction;
-use crate::processor::Context;
-use crate::processor::registers::Register;
+
 use crate::memory::memory::MemoryValue;
 
+use super::instruction::Instruction;
+use super::Context;
+use super::registers::Register;
 use super::instruction::{ALUType, AddrMode, ControlType, InstrType, InterruptType, MemoryType};
 
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -2,7 +2,7 @@
 // use std::cell::RefCell;
 
 use crate::memory::memory::Memory;
-use crate::processor::registers::Registers;
+use self::registers::Registers;
 // use crate::processor::pipeline::{Stage, StageType};
 
 pub mod instruction;
