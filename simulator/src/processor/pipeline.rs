@@ -195,12 +195,45 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
     StageResult::DONE
 }
 
-fn execute<'a>(_context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> StageResult {
+fn execute<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction) -> StageResult {
+    let regs = &mut context.borrow_mut().registers;
     match instr.instr_type {
-        InstrType::ALU(_alu_type) => StageResult::DONE,
-        InstrType::Control(_ctrl_type) => StageResult::DONE,
-        InstrType::Memory(_mem_type) => StageResult::DONE,
-        InstrType::Interrupt(_int_type) => StageResult::DONE,
+        InstrType::ALU(opcode) => {
+            match opcode {
+                ALUType::MOV  => instr.meta.result = instr.get_arg_2(regs) + instr.imm,
+                ALUType::ADD  => instr.meta.result = instr.get_arg_1(regs) + instr.get_arg_2(regs) + instr.imm,
+                ALUType::SUB  => instr.meta.result = instr.get_arg_1(regs) - instr.get_arg_2(regs) + instr.imm,
+                ALUType::IMUL => instr.meta.result = instr.get_arg_1(regs) * instr.get_arg_2(regs) + instr.imm,
+                ALUType::IDIV => instr.meta.result = instr.get_arg_1(regs) / instr.get_arg_2(regs) + instr.imm,
+                ALUType::AND  => instr.meta.result = instr.get_arg_1(regs) & instr.get_arg_2(regs) + instr.imm,
+                ALUType::OR   => instr.meta.result = instr.get_arg_1(regs) | instr.get_arg_2(regs) + instr.imm,
+                ALUType::XOR  => instr.meta.result = instr.get_arg_1(regs) ^ instr.get_arg_2(regs) + instr.imm,
+                ALUType::CMP  => instr.meta.result = instr.get_arg_1(regs) - (instr.get_arg_2(regs) + instr.imm),
+                ALUType::MOD  => instr.meta.result = instr.get_arg_1(regs) % instr.get_arg_2(regs) + instr.imm,
+                ALUType::NOT  => instr.meta.result = !(instr.get_arg_1(regs) + instr.imm),
+                ALUType::LSL  => instr.meta.result = instr.get_arg_1(regs) << instr.get_arg_2(regs) + instr.imm,
+                ALUType::LSR  => instr.meta.result = instr.get_arg_1(regs) >> instr.get_arg_2(regs) + instr.imm,
+            };
+            StageResult::DONE
+        },
+        InstrType::Control(opcode) => {
+            if match opcode {
+                ControlType::BEQ  => regs.get_reg(Register::BF) == 0,
+                ControlType::BLT  => regs.get_reg(Register::BF) <  0,
+                ControlType::BGT  => regs.get_reg(Register::BF) >  0,
+                ControlType::BNE  => regs.get_reg(Register::BF) != 0,
+                ControlType::B    => true,
+                ControlType::BGE  => regs.get_reg(Register::BF) >= 0,
+                ControlType::BLE  => regs.get_reg(Register::BF) <= 0,
+            } { 
+                instr.meta.result = instr.get_arg_1(regs) 
+            } else { 
+                instr.meta.writeback = false 
+            }
+            StageResult::DONE
+        },
+        InstrType::Memory(_opcode) => StageResult::DONE,
+        InstrType::Interrupt(_opcode) => StageResult::DONE,
     }
 }
 

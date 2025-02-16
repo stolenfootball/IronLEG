@@ -91,8 +91,6 @@ pub enum ControlType {
     BGT,
     BNE,
     B,
-    CALL,
-    RET,
     BGE,
     BLE,
 }
@@ -104,10 +102,8 @@ impl ControlType {
             0b0010 => ControlType::BGT,
             0b0011 => ControlType::BNE,
             0b0100 => ControlType::B,
-            0b0101 => ControlType::CALL,
-            0b0110 => ControlType::RET,
-            0b0111 => ControlType::BGE,
-            0b1000 => ControlType::BLE,
+            0b0101 => ControlType::BGE,
+            0b0110 => ControlType::BLE,
             _ => panic!("ControlType convert failure: {}", ctrl_type)
         }
     }
