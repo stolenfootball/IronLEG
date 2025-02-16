@@ -2,7 +2,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::memory::memory::MemoryValue;
+use crate::memory::MemoryValue;
 
 use super::instruction::Instruction;
 use super::Context;

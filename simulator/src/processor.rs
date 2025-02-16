@@ -1,7 +1,7 @@
 // use std::rc::Rc;
 // use std::cell::RefCell;
 
-use crate::memory::memory::Memory;
+use crate::memory::Memory;
 use self::registers::Registers;
 // use crate::processor::pipeline::{Stage, StageType};
 
