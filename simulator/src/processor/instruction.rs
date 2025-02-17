@@ -19,7 +19,7 @@ pub enum AddrMode {
 }
 
 impl AddrMode {
-    pub fn from_u32(mode: u32) -> AddrMode {
+    pub fn from_i32(mode: i32) -> AddrMode {
         match mode {
             0b000 => AddrMode::RegReg,
             0b001 => AddrMode::RegRegOff,
@@ -48,7 +48,7 @@ pub enum ALUType {
     LSR,
 }
 impl ALUType {
-    pub fn from_u32(alu_type: u32) -> ALUType {
+    pub fn from_i32(alu_type: i32) -> ALUType {
         match alu_type {
             0b0000 => ALUType::MOV,
             0b0001 => ALUType::ADD,
@@ -75,7 +75,7 @@ pub enum MemoryType {
 }
 
 impl MemoryType {
-    pub fn from_u32(mem_type: u32) -> MemoryType {
+    pub fn from_i32(mem_type: i32) -> MemoryType {
         match mem_type {
             0b0000 => MemoryType::LDR,
             0b0001 => MemoryType::STR,
@@ -95,7 +95,7 @@ pub enum ControlType {
     BLE,
 }
 impl ControlType {
-    pub fn from_u32(ctrl_type: u32) -> ControlType {
+    pub fn from_i32(ctrl_type: i32) -> ControlType {
         match ctrl_type {
             0b0000 => ControlType::BEQ,
             0b0001 => ControlType::BLT,
@@ -115,7 +115,7 @@ pub enum InterruptType {
     HLT,
 }
 impl InterruptType {
-    pub fn from_u32(int_type: u32) -> InterruptType {
+    pub fn from_i32(int_type: i32) -> InterruptType {
         match int_type {
             0b0000 => InterruptType::NOP,
             0b0001 => InterruptType::HLT,
@@ -129,18 +129,18 @@ impl InterruptType {
 pub struct InstrMeta {
     pub writeback: bool,
     pub squashed: bool,
-    pub result: u32,
+    pub result: i32,
 }
 
 #[derive(Debug)]
 pub struct Instruction {
-    pub instr_raw: u32,
+    pub instr_raw: i32,
     pub instr_type: InstrType,
     pub addr_mode: AddrMode,
     pub reg_1: Register,
     pub reg_2: Register,
     pub dest: Register,
-    pub imm: u32,
+    pub imm: i32,
     pub meta: InstrMeta,
 }
 
@@ -162,7 +162,7 @@ impl Instruction {
         }
     }
 
-    pub fn get_arg_1(&self, regs: &Registers) -> u32 {
+    pub fn get_arg_1(&self, regs: &Registers) -> i32 {
         match self.addr_mode {
             AddrMode::RegReg => regs.get_reg(self.reg_1),
             AddrMode::RegRegOff => regs.get_reg(self.reg_1),
@@ -172,7 +172,7 @@ impl Instruction {
         }
     }
 
-    pub fn get_arg_2(&self, regs: &Registers) -> u32 {
+    pub fn get_arg_2(&self, regs: &Registers) -> i32 {
         match self.addr_mode {
             AddrMode::RegReg => regs.get_reg(self.reg_2),
             AddrMode::RegRegOff => regs.get_reg(self.reg_2),

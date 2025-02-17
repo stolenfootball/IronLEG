@@ -19,7 +19,7 @@ pub enum Register {
 }
 
 impl Register {
-    pub fn from_u32(reg: u32) -> Register {
+    pub fn from_i32(reg: i32) -> Register {
         match reg {
             00 => Register::R0,
             01 => Register::R1,
@@ -44,7 +44,7 @@ impl Register {
 
 #[derive(Debug)]
 pub struct Registers {
-    pub registers: [u32; 16],
+    pub registers: [i32; 16],
     in_use: [bool; 16],
 }
 
@@ -56,11 +56,11 @@ impl Registers {
         }
     }
 
-    pub fn get_reg(&self, reg: Register) -> u32 {
+    pub fn get_reg(&self, reg: Register) -> i32 {
         self.registers[reg as usize]
     }
 
-    pub fn set_reg(&mut self, reg: Register, value: u32) {
+    pub fn set_reg(&mut self, reg: Register, value: i32) {
         self.registers[reg as usize] = value;
     }
 

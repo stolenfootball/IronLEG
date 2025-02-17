@@ -116,8 +116,8 @@ fn fetch<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction)
     let mut ctx = context.borrow_mut();
     let instr_addr = ctx.registers.get_reg(Register::SP) as usize;
     if let Some(MemoryValue::Value(value)) = ctx.memory.read(instr_addr, StageType::Fetch, false) {
-        instr.instr_raw = value as u32;
-        ctx.registers.set_reg(Register::SP, (instr_addr + 4) as u32);
+        instr.instr_raw = value as i32;
+        ctx.registers.set_reg(Register::SP, (instr_addr + 4) as i32);
         return StageResult::DONE;
     }
     StageResult::WAIT
@@ -128,21 +128,21 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
 
     let opcode = (raw >> 25) & 0xF;
     instr.instr_type = match raw >> 29 {
-        0b000 => InstrType::ALU(ALUType::from_u32(opcode)),
-        0b001 => InstrType::Memory(MemoryType::from_u32(opcode)),
-        0b010 => InstrType::Control(ControlType::from_u32(opcode)),
-        0b011 => InstrType::Interrupt(InterruptType::from_u32(opcode)),
+        0b000 => InstrType::ALU(ALUType::from_i32(opcode)),
+        0b001 => InstrType::Memory(MemoryType::from_i32(opcode)),
+        0b010 => InstrType::Control(ControlType::from_i32(opcode)),
+        0b011 => InstrType::Interrupt(InterruptType::from_i32(opcode)),
         _ => panic!("balls")
     };
     
-    instr.addr_mode = AddrMode::from_u32((raw >> 22) & 0x7);
+    instr.addr_mode = AddrMode::from_i32((raw >> 22) & 0x7);
 
 
     let regs = &mut context.borrow_mut().registers;
     match instr.addr_mode {
         AddrMode::RegReg => {
-            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
-            instr.reg_2 = Register::from_u32((raw >> 14) & 0xF);
+            instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
+            instr.reg_2 = Register::from_i32((raw >> 14) & 0xF);
             instr.dest = instr.reg_1;
 
             if regs.is_in_use(instr.reg_1) || regs.is_in_use(instr.reg_2) {
@@ -150,8 +150,8 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
             }
         },
         AddrMode::RegRegOff => {
-            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
-            instr.reg_2 = Register::from_u32((raw >> 14) & 0xF);
+            instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
+            instr.reg_2 = Register::from_i32((raw >> 14) & 0xF);
             instr.imm = raw & 0xFFFF;
             instr.dest = instr.reg_1;
 
@@ -160,7 +160,7 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
             }
         },
         AddrMode::RegImm => {
-            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
+            instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
             instr.imm = raw & 0xFFF;
             instr.dest = instr.reg_1;
 
@@ -172,7 +172,7 @@ fn decode<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
             instr.imm = raw & 0x3FFFFF
         },
         AddrMode::Reg => {
-            instr.reg_1 = Register::from_u32((raw >> 18) & 0xF);
+            instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
             instr.dest = instr.reg_1;
 
             if regs.is_in_use(instr.reg_1) {
@@ -245,7 +245,7 @@ fn memory<'a>(context: Rc<RefCell<&'a mut Context<'a>>>, instr: &mut Instruction
         return match mem_type {
             MemoryType::LDR => {
                 if let Some(MemoryValue::Value(response)) = ctx.memory.read(mem_addr, StageType::Memory, false) {
-                    instr.meta.result = response as u32;
+                    instr.meta.result = response as i32;
                 }
                 StageResult::WAIT
             },
