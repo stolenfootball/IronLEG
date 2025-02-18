@@ -9,11 +9,21 @@ use simulator::memory;
 
 use simulator::assembler;
 
-fn main() {
+
+#[macro_use] extern crate rocket;
+use rocket::fs::FileServer;
+
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/", FileServer::from("./interface/static"))
+}
+
+fn _test_asm() {
     let asm = fs::read_to_string("./test/test.leg").unwrap();
     let parsed = assembler::assemble(&asm);
     println!("{:?}", parsed);
 }
+
 
 
 fn _test_sim() {
