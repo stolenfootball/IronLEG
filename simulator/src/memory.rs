@@ -55,6 +55,6 @@ pub trait Transparency {
 
 pub trait Memory: Transparency {
     fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue>;
-    fn write(&mut self, addr: usize, value: MemoryValue, stage: StageType) -> bool;
+    fn write(&mut self, addr: usize, value: &MemoryValue, stage: StageType) -> bool;
     fn reset_state(&mut self);
 }

@@ -251,7 +251,7 @@ fn memory<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> St
             },
             MemoryType::STR => {
                 let val_to_store = instr.get_arg_1(&ctx.registers) as usize;
-                if ctx.memory.write(mem_addr, MemoryValue::Value(val_to_store), StageType::Memory) {
+                if ctx.memory.write(mem_addr, &MemoryValue::Value(val_to_store), StageType::Memory) {
                     instr.meta.writeback = false;
                     return StageResult::DONE;
                 }

@@ -111,7 +111,7 @@ impl Memory for Cache {
 
         if self.contents[cache_line_index].dirty {
             let evicted_value = MemoryValue::Line(self.contents[cache_line_index].contents.clone());
-            if !self.lower_level.write(self.contents[cache_line_index].addr, evicted_value, stage) {
+            if !self.lower_level.write(self.contents[cache_line_index].addr, &evicted_value, stage) {
                 return None;
             }
             self.contents[cache_line_index].dirty = false;
@@ -136,7 +136,7 @@ impl Memory for Cache {
         retrieved
     }
 
-    fn write(&mut self, addr: usize, value: MemoryValue, stage: StageType) -> bool {
+    fn write(&mut self, addr: usize, value: &MemoryValue, stage: StageType) -> bool {
         if !self.access.attempt_access(stage) { return false; }
 
         let location = self.cache_location(addr);
@@ -144,7 +144,7 @@ impl Memory for Cache {
 
         if self.contents[cache_line_index].dirty && self.contents[cache_line_index].tag != location.tag{
             let cloned_value = MemoryValue::Line(self.contents[cache_line_index].contents.clone());
-            if !self.lower_level.write(self.contents[cache_line_index].addr, cloned_value, stage) {
+            if !self.lower_level.write(self.contents[cache_line_index].addr, &cloned_value, stage) {
                 return false;
             }
             self.contents[cache_line_index].dirty = false;
@@ -152,8 +152,8 @@ impl Memory for Cache {
 
         let cache_line = &mut self.contents[cache_line_index];
         match value {
-            MemoryValue::Line(val) => cache_line.contents = val,
-            MemoryValue::Value(val) => cache_line.contents[location.offset] = val,
+            MemoryValue::Line(val) => cache_line.contents = val.clone(),
+            MemoryValue::Value(val) => cache_line.contents[location.offset] = *val,
         }
         cache_line.addr = addr;
         cache_line.valid = true;

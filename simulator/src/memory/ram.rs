@@ -45,14 +45,14 @@ impl Memory for RAM {
         }
     }
 
-    fn write(&mut self, addr: usize, value: MemoryValue, stage: StageType) -> bool {
+    fn write(&mut self, addr: usize, value: &MemoryValue, stage: StageType) -> bool {
         if !self.access.attempt_access(stage) { return false; }
         self.access.reset_access_state();
 
         let addr = self.addr_to_offset(addr);
         match value {
-            MemoryValue::Line(val) => self.contents[addr.0] = val,
-            MemoryValue::Value(val) => self.contents[addr.0][addr.1] = val,
+            MemoryValue::Line(val) => self.contents[addr.0] = val.clone(),
+            MemoryValue::Value(val) => self.contents[addr.0][addr.1] = *val,
         }
         true
     }
