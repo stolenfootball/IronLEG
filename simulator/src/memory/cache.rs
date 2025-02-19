@@ -20,18 +20,18 @@ struct CacheLine {
     contents: Vec<usize>,
 }
 
-pub struct Cache<'a> {
+pub struct Cache {
     size: usize,
     block_size: usize,
     word_size: usize,
     associativity: usize,
-    pub lower_level: &'a mut dyn Memory,
+    pub lower_level: Box<dyn Memory>,
     access: MemoryAccess,
     contents: Vec<CacheLine>,
 }
 
-impl <'a> Cache<'a> {
-    pub fn new(size: usize, block_size: usize, word_size: usize, latency: i32, associativity: usize, lower_level: &'a mut dyn Memory) -> Self {
+impl Cache {
+    pub fn new(size: usize, block_size: usize, word_size: usize, latency: i32, associativity: usize, lower_level: Box<dyn Memory>) -> Self {
         Self {
             size: size,
             block_size: block_size,
@@ -94,7 +94,7 @@ impl <'a> Cache<'a> {
 
 }
 
-impl <'a> Memory for Cache<'a> {
+impl Memory for Cache {
     fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue> {
         if !self.access.attempt_access(stage) { return None; }
 
@@ -170,7 +170,7 @@ impl <'a> Memory for Cache<'a> {
     }
 }
 
-impl Transparency for Cache<'_> {
+impl Transparency for Cache {
     fn peek_line(&self, line_num: usize) -> &Vec<usize> {
         &self.contents[line_num].contents
     }
