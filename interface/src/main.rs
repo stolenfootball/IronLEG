@@ -25,7 +25,10 @@ fn _test_asm() {
 
 fn test_processor() {
     let mut simulator = simulator::Simulator::new();
-    for _ in 0..100 {
+    for _ in 0..10 {
         simulator.processor.cycle();
+        println!("{:?}", simulator.processor.peek_pipeline_instrs());
+        println!("{:?}", simulator.processor.peek_pipeline_status());
+        println!("{:?}", simulator.peek_regs());
     }
 }

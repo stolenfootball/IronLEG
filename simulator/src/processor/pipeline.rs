@@ -110,6 +110,24 @@ impl Stage {
             prev.cycle();
         }
     }
+
+    pub fn peek_pipeline_instrs(&self) -> Vec<&Option<Instruction>> {
+        let mut instrs = match &self.prev_stage {
+            Some(prev) => prev.peek_pipeline_instrs(),
+            None => vec![]
+        };
+        instrs.push(&self.instruction);
+        instrs
+    }
+
+    pub fn peek_pipeline_status(&self) -> Vec<bool> {
+        let mut instrs = match &self.prev_stage {
+            Some(prev) => prev.peek_pipeline_status(),
+            None => vec![]
+        };
+        instrs.push(self.status.finished);
+        instrs
+    }
 } 
 
 fn fetch<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> StageResult {

@@ -39,4 +39,8 @@ impl Simulator {
             context: context,
         }
     }
+
+    pub fn peek_regs(&self) -> [i32; 16] {
+        self.context.borrow().registers.registers
+    }
 }
