@@ -108,7 +108,7 @@ fn parse_line(input: &str) -> u32 {
     let remaining: String = remaining.split_whitespace().collect();
 
     let (_, ops) = parse_comma_sep(&remaining).unwrap();
-    println!("{:?} {:?}", instr_type, ops);
+    // println!("{:?} {:?}", instr_type, ops);
 
     let mut instr: u32 = match instr_type {
         InstrType::ALU(opcode) => 0b000 << 29 | (opcode as u32) << 25,

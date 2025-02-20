@@ -60,6 +60,14 @@ impl Memory for RAM {
     fn reset_state(&mut self) {
         self.access.reset_access_state();
     }
+
+    fn flash(&mut self, program: &Vec<usize>) {
+        for i in (0..(program.len() * 4)).step_by(4) {
+            let addr = self.addr_to_offset(i);
+            self.contents[addr.0][addr.1] = program[i / 4];
+        }
+        println!("{:?}", self.contents[0])
+    }
 }
 
 impl Transparency for RAM {

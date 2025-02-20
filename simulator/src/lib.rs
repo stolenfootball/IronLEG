@@ -40,6 +40,11 @@ impl Simulator {
         }
     }
 
+    pub fn flash(&mut self, program: &Vec<u32>) {
+        let program: Vec<usize> = program.into_iter().map(|x| *x as usize).collect();
+        self.context.borrow_mut().memory.flash(&program);
+    }
+
     pub fn peek_regs(&self) -> [i32; 16] {
         self.context.borrow().registers.registers
     }

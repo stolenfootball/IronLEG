@@ -168,6 +168,10 @@ impl Memory for Cache {
         self.lower_level.reset_state();
         self.access.reset_access_state();
     }
+
+    fn flash(&mut self, program: &Vec<usize>) {
+        self.lower_level.flash(program);
+    }
 }
 
 impl Transparency for Cache {
