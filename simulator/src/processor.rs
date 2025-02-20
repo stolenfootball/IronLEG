@@ -8,6 +8,7 @@ pub use super::Context;
 pub mod instruction;
 pub mod registers;
 pub mod pipeline;
+pub mod stages;
 
 
 
