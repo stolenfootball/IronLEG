@@ -27,7 +27,7 @@ impl Context {
 }
 
 pub struct Simulator {
-    pub pipeline: Box<pipeline::Stage>,
+    pub processor: Box<pipeline::Stage>,
     pub context: Rc<RefCell<Box<Context>>>,
 }
 
@@ -35,7 +35,7 @@ impl Simulator {
     pub fn new() -> Simulator {
         let context = Rc::new(RefCell::new(Box::new(Context::new())));
         Simulator {
-            pipeline: processor::new(Rc::clone(&context)),
+            processor: processor::new(Rc::clone(&context)),
             context: context,
         }
     }

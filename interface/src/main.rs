@@ -26,6 +26,6 @@ fn _test_asm() {
 fn test_processor() {
     let mut simulator = simulator::Simulator::new();
     for _ in 0..100 {
-        simulator.pipeline.cycle();
+        simulator.processor.cycle();
     }
 }
