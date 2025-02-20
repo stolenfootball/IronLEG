@@ -110,7 +110,10 @@ impl Stage {
             prev.cycle();
         }
     }
+} 
 
+// Functions for external visibility separated out for clarity
+impl Stage {
     pub fn peek_pipeline_instrs(&self) -> Vec<&Option<Instruction>> {
         let mut instrs = match &self.prev_stage {
             Some(prev) => prev.peek_pipeline_instrs(),
@@ -128,7 +131,8 @@ impl Stage {
         instrs.push(self.status.finished);
         instrs
     }
-} 
+}
+
 
 fn fetch<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> StageResult {
     let mut ctx = context.borrow_mut();

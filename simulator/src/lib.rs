@@ -8,7 +8,6 @@ pub mod memory;
 pub mod assembler;
 pub mod processor;
 
-
 pub struct Context {
     pub registers: Box<Registers>,
     pub memory: Box<dyn memory::Memory>,
@@ -44,7 +43,11 @@ impl Simulator {
         let program: Vec<usize> = program.into_iter().map(|x| *x as usize).collect();
         self.context.borrow_mut().memory.flash(&program);
     }
+}
 
+
+// Functions for external visibility separated out for clarity
+impl Simulator {
     pub fn peek_regs(&self) -> [i32; 16] {
         self.context.borrow().registers.registers
     }
