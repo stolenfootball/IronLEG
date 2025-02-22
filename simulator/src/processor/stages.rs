@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use crate::memory::MemoryValue;
 
@@ -20,8 +19,8 @@ pub enum StageType {
 }
 
 
-pub fn fetch<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let mut ctx = context.borrow_mut();
+pub fn fetch<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
+    let mut ctx = context.lock().unwrap();
     let instr_addr = ctx.registers.get_reg(Register::SP) as usize;
     if let Some(MemoryValue::Value(value)) = ctx.memory.read(instr_addr, StageType::Fetch, false) {
         instr.instr_raw = value as i32;
@@ -31,7 +30,7 @@ pub fn fetch<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) ->
     StageResult::WAIT
 }
 
-pub fn decode<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> StageResult {
+pub fn decode<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
     let raw = instr.instr_raw;
 
     let opcode = (raw >> 25) & 0xF;
@@ -46,7 +45,7 @@ pub fn decode<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -
     instr.addr_mode = AddrMode::from_i32((raw >> 22) & 0x7);
 
 
-    let regs = &mut context.borrow_mut().registers;
+    let regs = &mut context.lock().unwrap().registers;
     match instr.addr_mode {
         AddrMode::RegReg => {
             instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
@@ -104,8 +103,8 @@ pub fn decode<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -
     StageResult::DONE
 }
 
-pub fn execute<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let regs = &mut context.borrow_mut().registers;
+pub fn execute<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
+    let regs = &mut context.lock().unwrap().registers;
     match instr.instr_type {
         InstrType::ALU(opcode) => {
             match opcode {
@@ -146,8 +145,8 @@ pub fn execute<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) 
     }
 }
 
-pub fn memory<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let mut ctx = context.borrow_mut();
+pub fn memory<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
+    let mut ctx = context.lock().unwrap();
     if let InstrType::Memory(mem_type) = instr.instr_type  {
         let mem_addr = instr.get_arg_2(&ctx.registers) as usize;
         return match mem_type {
@@ -170,8 +169,8 @@ pub fn memory<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -
     StageResult::DONE
 }
 
-pub fn writeback<'a>(context: Rc<RefCell<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let mut ctx = context.borrow_mut();
+pub fn writeback<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
+    let mut ctx = context.lock().unwrap();
     if instr.meta.writeback {
         ctx.registers.set_reg(instr.dest, instr.meta.result);
     }

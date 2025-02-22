@@ -7,7 +7,4 @@ edition = "2021"
 
 [dependencies]
 simulator = { path = "../simulator" }
-axum = "0.8.1"
-tokio = { version = "1.43.0", features = ["full"] }
-tower = { version = "0.5.1", features = ["full"] }
-tower-http = "0.6.2"
+actix-web = "4"

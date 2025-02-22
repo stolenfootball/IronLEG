@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use super::instruction::Instruction;
 use super::Context;
@@ -21,13 +20,13 @@ struct StageStatus {
 pub struct Stage {
     status: StageStatus,
     instruction: Option<Instruction>,
-    context: Rc<RefCell<Box<Context>>>,
+    context: Arc<Mutex<Box<Context>>>,
     prev_stage: Option<Box<Stage>>,
-    process: fn(Rc<RefCell<Box<Context>>>, &mut Instruction) -> StageResult,
+    process: fn(Arc<Mutex<Box<Context>>>, &mut Instruction) -> StageResult,
 }
 
 impl Stage {
-    pub fn create(context: Rc<RefCell<Box<Context>>>, stage_type: StageType, prev_stage: Option<Box<Stage>>) -> Stage {
+    pub fn create(context: Arc<Mutex<Box<Context>>>, stage_type: StageType, prev_stage: Option<Box<Stage>>) -> Stage {
         Stage {
             status: StageStatus {
                 finished: false,
@@ -85,7 +84,7 @@ impl Stage {
         if let Some(instr) = &mut self.instruction {
             if instr.meta.squashed { self.status.finished = true; }
             if !self.status.finished { 
-                self.status.finished = match (self.process)(Rc::clone(&self.context), instr) {
+                self.status.finished = match (self.process)(Arc::clone(&self.context), instr) {
                     StageResult::DONE => true,
                     StageResult::WAIT => false,
                     StageResult::SQUASH => {

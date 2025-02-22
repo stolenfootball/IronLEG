@@ -1,38 +1,50 @@
-use std::fs;
+// use std::fs;
 
 use simulator;
-use simulator::assembler;
+// use simulator::assembler;
 
-// use axum;
-
-
-// #[tokio::main]
-// async fn main() {
-//     // Build our application with a single route.
-//     let app = axum::Router::new().route("/",
-//         axum::routing::get(|| async { "Hello, World!" }));
-
-//     // Run our application as a hyper server on http://localhost:3000.
-//     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-//     axum::serve(listener, app).await.unwrap();
-// }
 
 // fn main() {
-//     test_processor();
+//     let asm = fs::read_to_string("./test/test.leg").unwrap();
+//     let program = assembler::assemble(&asm);
+
+//     let mut simulator = simulator::Simulator::new();
+//     simulator.flash(&program);
+
+//     for _ in 0..20 {
+//         simulator.processor.cycle();
+//         println!("{:?}", simulator.processor.peek_pipeline_instrs());
+//         println!("{:?}", simulator.processor.peek_pipeline_status());
+//         println!("{:?}\n", simulator.peek_regs());
+//     }
 // }
 
 
-fn main() {
-    let asm = fs::read_to_string("./test/test.leg").unwrap();
-    let program = assembler::assemble(&asm);
+use actix_web::{get, web, App, HttpServer, Responder};
+use std::sync::Mutex;
 
-    let mut simulator = simulator::Simulator::new();
-    simulator.flash(&program);
+struct SimulatorState {
+    sim: Mutex<simulator::Simulator>,
+}
 
-    for _ in 0..20 {
-        simulator.processor.cycle();
-        println!("{:?}", simulator.processor.peek_pipeline_instrs());
-        println!("{:?}", simulator.processor.peek_pipeline_status());
-        println!("{:?}\n", simulator.peek_regs());
-    }
+
+#[get("/")]
+async fn index() -> impl Responder {
+    "Hello world!"
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let sim = web::Data::new(SimulatorState {
+        sim: Mutex::new(simulator::Simulator::new()),
+    });
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(sim.clone())
+            .service(index)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }

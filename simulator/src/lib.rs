@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use crate::processor::registers::Registers;
 use crate::processor::pipeline;
@@ -27,21 +26,21 @@ impl Context {
 
 pub struct Simulator {
     pub processor: Box<pipeline::Stage>,
-    pub context: Rc<RefCell<Box<Context>>>,
+    pub context: Arc<Mutex<Box<Context>>>,
 }
 
 impl Simulator {
     pub fn new() -> Simulator {
-        let context = Rc::new(RefCell::new(Box::new(Context::new())));
+        let context = Arc::new(Mutex::new(Box::new(Context::new())));
         Simulator {
-            processor: processor::new(Rc::clone(&context)),
+            processor: processor::new(Arc::clone(&context)),
             context: context,
         }
     }
 
     pub fn flash(&mut self, program: &Vec<u32>) {
         let program: Vec<usize> = program.into_iter().map(|x| *x as usize).collect();
-        self.context.borrow_mut().memory.flash(&program);
+        self.context.lock().unwrap().memory.flash(&program);
     }
 }
 
@@ -49,6 +48,6 @@ impl Simulator {
 // Functions for external visibility separated out for clarity
 impl Simulator {
     pub fn peek_regs(&self) -> [i32; 16] {
-        self.context.borrow().registers.registers
+        self.context.lock().unwrap().registers.registers
     }
 }
