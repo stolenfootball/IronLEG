@@ -1,8 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use super::instruction::Instruction;
-use super::Context;
+use super::registers::Registers;
 use super::stages;
+use crate::memory::Memory;
 
 pub use super::stages::StageType;
 
@@ -20,20 +21,22 @@ struct StageStatus {
 pub struct Stage {
     status: StageStatus,
     instruction: Option<Instruction>,
-    context: Arc<Mutex<Box<Context>>>,
+    mem: Arc<Mutex<Box<dyn Memory>>>,
+    regs: Arc<Mutex<Registers>>,
     prev_stage: Option<Box<Stage>>,
-    process: fn(Arc<Mutex<Box<Context>>>, &mut Instruction) -> StageResult,
+    process: fn(Arc<Mutex<Box<dyn Memory>>>, Arc<Mutex<Registers>>, &mut Instruction) -> StageResult,
 }
 
 impl Stage {
-    pub fn create(context: Arc<Mutex<Box<Context>>>, stage_type: StageType, prev_stage: Option<Box<Stage>>) -> Stage {
+    pub fn create(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, stage_type: StageType, prev_stage: Option<Box<Stage>>) -> Stage {
         Stage {
             status: StageStatus {
                 finished: false,
                 pipeline_on: true,
             },
             instruction: None,
-            context: context,
+            mem: mem,
+            regs: regs,
             prev_stage: prev_stage,
             process: match stage_type {
                 StageType::Fetch => stages::fetch, 
@@ -84,7 +87,7 @@ impl Stage {
         if let Some(instr) = &mut self.instruction {
             if instr.meta.squashed { self.status.finished = true; }
             if !self.status.finished { 
-                self.status.finished = match (self.process)(Arc::clone(&self.context), instr) {
+                self.status.finished = match (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr) {
                     StageResult::DONE => true,
                     StageResult::WAIT => false,
                     StageResult::SQUASH => {
@@ -118,5 +121,9 @@ impl Stage {
         };
         instrs.push(self.status.finished);
         instrs
+    }
+
+    pub fn peek_registers(&self) -> [i32; 16] {
+        self.regs.lock().unwrap().registers
     }
 }

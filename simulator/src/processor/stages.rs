@@ -1,11 +1,9 @@
 use std::sync::{Arc, Mutex};
 
-use crate::memory::MemoryValue;
+use crate::memory::{Memory, MemoryValue};
 
-use super::instruction::Instruction;
-use super::Context;
-use super::registers::Register;
-use super::instruction::{ALUType, AddrMode, ControlType, InstrType, InterruptType, MemoryType};
+use super::registers::{Register, Registers};
+use super::instruction::{Instruction, ALUType, AddrMode, ControlType, InstrType, InterruptType, MemoryType};
 use super::pipeline::StageResult;
 
 
@@ -19,18 +17,17 @@ pub enum StageType {
 }
 
 
-pub fn fetch<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let mut ctx = context.lock().unwrap();
-    let instr_addr = ctx.registers.get_reg(Register::SP) as usize;
-    if let Some(MemoryValue::Value(value)) = ctx.memory.read(instr_addr, StageType::Fetch, false) {
+pub fn fetch<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+    let instr_addr = regs.lock().unwrap().get_reg(Register::SP) as usize;
+    if let Some(MemoryValue::Value(value)) = mem.lock().unwrap().read(instr_addr, StageType::Fetch, false) {
         instr.instr_raw = value as i32;
-        ctx.registers.set_reg(Register::SP, (instr_addr + 4) as i32);
+        regs.lock().unwrap().set_reg(Register::SP, (instr_addr + 4) as i32);
         return StageResult::DONE;
     }
     StageResult::WAIT
 }
 
-pub fn decode<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
+pub fn decode<'a>(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
     let raw = instr.instr_raw;
 
     let opcode = (raw >> 25) & 0xF;
@@ -45,7 +42,7 @@ pub fn decode<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) ->
     instr.addr_mode = AddrMode::from_i32((raw >> 22) & 0x7);
 
 
-    let regs = &mut context.lock().unwrap().registers;
+    let mut regs = regs.lock().unwrap();
     match instr.addr_mode {
         AddrMode::RegReg => {
             instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
@@ -103,24 +100,24 @@ pub fn decode<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) ->
     StageResult::DONE
 }
 
-pub fn execute<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let regs = &mut context.lock().unwrap().registers;
+pub fn execute<'a>(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+    let regs = regs.lock().unwrap();
     match instr.instr_type {
         InstrType::ALU(opcode) => {
             match opcode {
-                ALUType::MOV  => instr.meta.result = instr.get_arg_2(regs) + instr.imm,
-                ALUType::ADD  => instr.meta.result = instr.get_arg_1(regs) + instr.get_arg_2(regs) + instr.imm,
-                ALUType::SUB  => instr.meta.result = instr.get_arg_1(regs) - instr.get_arg_2(regs) + instr.imm,
-                ALUType::IMUL => instr.meta.result = instr.get_arg_1(regs) * instr.get_arg_2(regs) + instr.imm,
-                ALUType::IDIV => instr.meta.result = instr.get_arg_1(regs) / instr.get_arg_2(regs) + instr.imm,
-                ALUType::AND  => instr.meta.result = instr.get_arg_1(regs) & instr.get_arg_2(regs) + instr.imm,
-                ALUType::OR   => instr.meta.result = instr.get_arg_1(regs) | instr.get_arg_2(regs) + instr.imm,
-                ALUType::XOR  => instr.meta.result = instr.get_arg_1(regs) ^ instr.get_arg_2(regs) + instr.imm,
-                ALUType::CMP  => instr.meta.result = instr.get_arg_1(regs) - (instr.get_arg_2(regs) + instr.imm),
-                ALUType::MOD  => instr.meta.result = instr.get_arg_1(regs) % instr.get_arg_2(regs) + instr.imm,
-                ALUType::NOT  => instr.meta.result = !(instr.get_arg_1(regs) + instr.imm),
-                ALUType::LSL  => instr.meta.result = instr.get_arg_1(regs) << instr.get_arg_2(regs) + instr.imm,
-                ALUType::LSR  => instr.meta.result = instr.get_arg_1(regs) >> instr.get_arg_2(regs) + instr.imm,
+                ALUType::MOV  => instr.meta.result = instr.get_arg_2(&regs) + instr.imm,
+                ALUType::ADD  => instr.meta.result = instr.get_arg_1(&regs) + instr.get_arg_2(&regs) + instr.imm,
+                ALUType::SUB  => instr.meta.result = instr.get_arg_1(&regs) - instr.get_arg_2(&regs) + instr.imm,
+                ALUType::IMUL => instr.meta.result = instr.get_arg_1(&regs) * instr.get_arg_2(&regs) + instr.imm,
+                ALUType::IDIV => instr.meta.result = instr.get_arg_1(&regs) / instr.get_arg_2(&regs) + instr.imm,
+                ALUType::AND  => instr.meta.result = instr.get_arg_1(&regs) & instr.get_arg_2(&regs) + instr.imm,
+                ALUType::OR   => instr.meta.result = instr.get_arg_1(&regs) | instr.get_arg_2(&regs) + instr.imm,
+                ALUType::XOR  => instr.meta.result = instr.get_arg_1(&regs) ^ instr.get_arg_2(&regs) + instr.imm,
+                ALUType::CMP  => instr.meta.result = instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::MOD  => instr.meta.result = instr.get_arg_1(&regs) % instr.get_arg_2(&regs) + instr.imm,
+                ALUType::NOT  => instr.meta.result = !(instr.get_arg_1(&regs) + instr.imm),
+                ALUType::LSL  => instr.meta.result = instr.get_arg_1(&regs) << instr.get_arg_2(&regs) + instr.imm,
+                ALUType::LSR  => instr.meta.result = instr.get_arg_1(&regs) >> instr.get_arg_2(&regs) + instr.imm,
             };
             StageResult::DONE
         },
@@ -134,7 +131,7 @@ pub fn execute<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -
                 ControlType::BGE  => regs.get_reg(Register::BF) >= 0,
                 ControlType::BLE  => regs.get_reg(Register::BF) <= 0,
             } { 
-                instr.meta.result = instr.get_arg_1(regs) 
+                instr.meta.result = instr.get_arg_1(&regs) 
             } else { 
                 instr.meta.writeback = false 
             }
@@ -145,20 +142,22 @@ pub fn execute<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -
     }
 }
 
-pub fn memory<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let mut ctx = context.lock().unwrap();
+pub fn memory<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+    let regs = regs.lock().unwrap();
+    let mut mem = mem.lock().unwrap();
+
     if let InstrType::Memory(mem_type) = instr.instr_type  {
-        let mem_addr = instr.get_arg_2(&ctx.registers) as usize;
+        let mem_addr = instr.get_arg_2(&regs) as usize;
         return match mem_type {
             MemoryType::LDR => {
-                if let Some(MemoryValue::Value(response)) = ctx.memory.read(mem_addr, StageType::Memory, false) {
+                if let Some(MemoryValue::Value(response)) = mem.read(mem_addr, StageType::Memory, false) {
                     instr.meta.result = response as i32;
                 }
                 StageResult::WAIT
             },
             MemoryType::STR => {
-                let val_to_store = instr.get_arg_1(&ctx.registers) as usize;
-                if ctx.memory.write(mem_addr, &MemoryValue::Value(val_to_store), StageType::Memory) {
+                let val_to_store = instr.get_arg_1(&regs) as usize;
+                if mem.write(mem_addr, &MemoryValue::Value(val_to_store), StageType::Memory) {
                     instr.meta.writeback = false;
                     return StageResult::DONE;
                 }
@@ -169,17 +168,17 @@ pub fn memory<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) ->
     StageResult::DONE
 }
 
-pub fn writeback<'a>(context: Arc<Mutex<Box<Context>>>, instr: &mut Instruction) -> StageResult {
-    let mut ctx = context.lock().unwrap();
+pub fn writeback<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+    let mut regs = regs.lock().unwrap();
     if instr.meta.writeback {
-        ctx.registers.set_reg(instr.dest, instr.meta.result);
+        regs.set_reg(instr.dest, instr.meta.result);
     }
-    ctx.registers.set_in_use(instr.dest, false);
+    regs.set_in_use(instr.dest, false);
 
     if instr.meta.writeback {
         if let InstrType::Control(_) = instr.instr_type {
-            ctx.registers.clear_in_use();
-            ctx.memory.reset_state();
+            regs.clear_in_use();
+            mem.lock().unwrap().reset_state();
             return StageResult::SQUASH;
         }
     }   
