@@ -5,18 +5,13 @@ use simulator::assembler;
 
 
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, Result};
+use actix_files;
 // use serde::Serialize;
 use std::sync::Mutex;
 
 struct SimulatorState {
     sim: Mutex<simulator::Simulator>,
 }
-
-#[get("/")]
-async fn index() -> impl Responder {
-    "Hello world!"
-}
-
 
 #[get("/registers")]
 async fn get_regs(data: web::Data<SimulatorState>) -> impl Responder {
@@ -70,11 +65,11 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(sim.clone())
-            .service(index)
             .service(get_regs)
             .service(step)
             .service(get_size)
             .service(get_line)
+            .service(actix_files::Files::new("/", "./interface/static").show_files_listing())
     })
     .bind(("127.0.0.1", 8080))?
     .run()
