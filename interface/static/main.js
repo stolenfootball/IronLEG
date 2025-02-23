@@ -18,8 +18,15 @@ async function update_registers() {
     }
 }
 
+async function step() {
+    await fetch('/step');
+    await update_registers();
+}
+
 async function main() {
     await update_registers();
+
+    document.getElementById('step-button').onclick = step;
 }
 
 main();
