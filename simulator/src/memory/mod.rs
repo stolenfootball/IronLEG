@@ -53,7 +53,7 @@ pub trait Transparency {
     fn peek_access(&self) -> &MemoryAccess;
 }
 
-pub trait Memory: Transparency {
+pub trait Memory: Transparency + Send {
     fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue>;
     fn write(&mut self, addr: usize, value: &MemoryValue, stage: StageType) -> bool;
     fn flash(&mut self, program: &Vec<usize>);

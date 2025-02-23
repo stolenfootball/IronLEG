@@ -27,7 +27,6 @@ struct SimulatorState {
     sim: Mutex<simulator::Simulator>,
 }
 
-
 #[get("/")]
 async fn index() -> impl Responder {
     "Hello world!"
