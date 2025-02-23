@@ -175,11 +175,25 @@ impl Memory for Cache {
 }
 
 impl Transparency for Cache {
-    fn peek_line(&self, line_num: usize) -> &Vec<usize> {
-        &self.contents[line_num].contents
+    fn view_line(&self, line_num: usize) -> Vec<&Vec<usize>> {
+        let mut contents = self.lower_level.view_line(line_num);
+        if line_num < self.size {
+            contents.push(&self.contents[line_num].contents);
+        } else {
+            contents.push(&self.contents[0].contents)
+        }
+        contents
     }
 
-    fn peek_access(&self) -> &MemoryAccess {
-        &self.access
+    fn view_access(&self) -> Vec<&MemoryAccess> {
+        let mut access = self.lower_level.view_access();
+        access.push(&self.access);
+        access
+    }
+
+    fn view_size(&self) -> Vec<usize> {
+        let mut size = self.lower_level.view_size();
+        size.push(self.size);
+        size
     }
 }

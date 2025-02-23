@@ -66,16 +66,23 @@ impl Memory for RAM {
             let addr = self.addr_to_offset(i);
             self.contents[addr.0][addr.1] = program[i / 4];
         }
-        println!("{:?}", self.contents[0])
     }
 }
 
 impl Transparency for RAM {
-    fn peek_line(&self, addr: usize) -> &Vec<usize> {
-        &self.contents[self.align(addr)]
+    fn view_line(&self, line_num: usize) -> Vec<&Vec<usize>> {
+        vec![if line_num < self.size {
+            &self.contents[line_num]
+        } else {
+            &self.contents[0]
+        }]
     }
 
-    fn peek_access(&self) -> &MemoryAccess {
-        &self.access
+    fn view_access(&self) -> Vec<&MemoryAccess> {
+        vec![&self.access]
+    }
+
+    fn view_size(&self) -> Vec<usize> {
+        vec![self.size]
     }
 }

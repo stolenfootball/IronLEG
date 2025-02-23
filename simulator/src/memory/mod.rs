@@ -49,8 +49,9 @@ impl MemoryAccess {
 }
 
 pub trait Transparency {
-    fn peek_line(&self, addr: usize) -> &Vec<usize>;
-    fn peek_access(&self) -> &MemoryAccess;
+    fn view_line(&self, line_num: usize) -> Vec<&Vec<usize>>;
+    fn view_access(&self) -> Vec<&MemoryAccess>;
+    fn view_size(&self) -> Vec<usize>;
 }
 
 pub trait Memory: Transparency + Send {
