@@ -34,12 +34,11 @@ impl MemoryAccess {
                 if current_stage != attempt_stage { 
                     return false; 
                 }
-                self.cycles_to_completion -= 1;
-                return self.cycles_to_completion <= 0;
             },
             None => self.stage = Some(attempt_stage)
         }
-        false
+        self.cycles_to_completion -= 1;
+        self.cycles_to_completion <= 0
     }
 
     pub fn reset_access_state(&mut self) {
