@@ -56,7 +56,7 @@ impl Cache {
     fn cache_location(&self, addr: usize) -> CacheLocation {
         let addr = self.align(addr);
         CacheLocation {
-            offset: addr & self.block_size - 1,
+            offset: addr / self.word_size & self.block_size - 1,
             index: (addr >> usize::ilog2(self.block_size)) * self.associativity % self.size,
             tag:   (addr >> usize::ilog2(self.block_size)) / self.size,
         }
@@ -117,13 +117,11 @@ impl Memory for Cache {
             self.contents[cache_line_index].dirty = false;
         }
 
-        let retrieved = self.lower_level.read(addr, stage, line);
-
-        if let Some(data) = &retrieved {
+        if let Some(data) = &self.lower_level.read(addr, stage, true) {
             let cache_line = &mut self.contents[cache_line_index];
             cache_line.contents = match data {
                 MemoryValue::Line(val) => val.clone(),
-                MemoryValue::Value(val) => vec![*val; self.block_size],
+                _ => panic!("what the hellllll"),
             };
             cache_line.addr = addr;
             cache_line.valid = true;
@@ -131,9 +129,13 @@ impl Memory for Cache {
             cache_line.tag = location.tag;
 
             self.access.reset_access_state();
+
+            return match line {
+                true => Some(MemoryValue::Line(self.contents[cache_line_index].contents.clone())),
+                false => Some(MemoryValue::Value(self.contents[cache_line_index].contents[location.offset])),
+            }
         }
-        
-        retrieved
+        None
     }
 
     fn write(&mut self, addr: usize, value: &MemoryValue, stage: StageType) -> bool {
