@@ -18,10 +18,10 @@ pub enum StageType {
 
 
 pub fn fetch<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
-    let instr_addr = regs.lock().unwrap().get_reg(Register::SP) as usize;
+    let instr_addr = regs.lock().unwrap().get_reg(Register::PC) as usize;
     if let Some(MemoryValue::Value(value)) = mem.lock().unwrap().read(instr_addr, StageType::Fetch, false) {
         instr.instr_raw = value as i32;
-        regs.lock().unwrap().set_reg(Register::SP, (instr_addr + 4) as i32);
+        regs.lock().unwrap().set_reg(Register::PC, (instr_addr + 4) as i32);
         return StageResult::DONE;
     }
     StageResult::WAIT
