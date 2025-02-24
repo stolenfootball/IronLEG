@@ -35,15 +35,20 @@ async function update_pipeline() {
             td.innerHTML = `
                 Stage Status: ${status_data[i]} <br>
                 Raw Instruction: ${element.instr_raw} <br>
-                Instruction Type: ${Object.keys(element.instr_type)} ${element.instr_type[Object.keys(element.instr_type)]} <br>
-                Address Mode: ${element.addr_mode} <br>
-                Register 1: ${element.reg_1} <br>
-                Register 2: ${element.reg_2} <br>
-                Immediate: ${element.imm} <br>
-                Result: ${element.meta.result} <br>
-                Squashed: ${element.meta.squashed} <br>
-                Writeback: ${element.meta.writeback} <br>
             `;
+            if (i > 0) {
+                td.innerHTML += `
+                    Instruction Type: ${Object.keys(element.instr_type)} ${element.instr_type[Object.keys(element.instr_type)]} <br>
+                    Address Mode: ${element.addr_mode} <br>
+                    Register 1: ${element.reg_1} <br>
+                    Register 2: ${element.reg_2} <br>
+                    Immediate: ${element.imm} <br>
+                    Result: ${element.meta.result} <br>
+                    Squashed: ${element.meta.squashed} <br>
+                    Writeback: ${element.meta.writeback} <br></br>
+                `;
+            }
+
         } else {
             td.innerHTML = 'EMPTY';
         }

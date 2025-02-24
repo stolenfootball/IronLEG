@@ -14,6 +14,7 @@ pub enum StageResult {
     WAIT,
     SQUASH,
     COMPLETE,
+    HALT,
 }
 
 pub struct Stage {
@@ -72,7 +73,9 @@ impl Stage {
 
     pub fn squash(&mut self) {
         if let Some(instr) = &mut self.instruction {
-            instr.meta.squashed = true;
+            if instr.meta.initialized {
+                instr.meta.squashed = true;
+            }
         }
         if let Some(prev_stage) = &mut self.prev_stage {
             prev_stage.squash();
@@ -80,15 +83,15 @@ impl Stage {
     }
 
     pub fn cycle(&mut self) {
+        if self.status == StageResult::HALT { return; }
+
         self.load();
         if let Some(instr) = &mut self.instruction {
-            if instr.meta.squashed { self.status = StageResult::DONE; }
-            
             self.status = (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr);
-            
+
             if self.status == StageResult::SQUASH { self.squash(); }
             if self.status == StageResult::SQUASH || self.status == StageResult::COMPLETE { 
-                self.instruction.take(); 
+                self.instruction = None; 
                 self.status = StageResult::DONE 
             }
         }

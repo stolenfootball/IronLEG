@@ -21,6 +21,7 @@ pub fn fetch<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, 
     let instr_addr = regs.lock().unwrap().get_reg(Register::PC) as usize;
     if let Some(MemoryValue::Value(value)) = mem.lock().unwrap().read(instr_addr, StageType::Fetch, false) {
         instr.instr_raw = value as i32;
+        instr.meta.initialized = true;
         regs.lock().unwrap().set_reg(Register::PC, (instr_addr + 4) as i32);
         return StageResult::DONE;
     }
@@ -169,6 +170,8 @@ pub fn memory<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>,
 }
 
 pub fn writeback<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+    if instr.meta.squashed { return StageResult::COMPLETE }
+
     let mut regs = regs.lock().unwrap();
     if instr.meta.writeback {
         regs.set_reg(instr.dest, instr.meta.result);
@@ -181,6 +184,11 @@ pub fn writeback<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers
             mem.lock().unwrap().reset_state();
             return StageResult::SQUASH;
         }
-    }   
+    }
+
+    if let InstrType::Interrupt(InterruptType::HLT) = instr.instr_type {
+        return StageResult::HALT;
+    }
+
     StageResult::COMPLETE
 }

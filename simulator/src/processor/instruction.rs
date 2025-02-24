@@ -131,6 +131,7 @@ pub struct InstrMeta {
     pub writeback: bool,
     pub squashed: bool,
     pub result: i32,
+    pub initialized: bool,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -159,6 +160,7 @@ impl Instruction {
                 writeback: true,
                 squashed: false,
                 result: 0,
+                initialized: false,
             },
         }
     }
