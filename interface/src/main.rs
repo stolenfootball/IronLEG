@@ -16,7 +16,7 @@ struct SimulatorState {
 #[get("/registers")]
 async fn get_regs(data: web::Data<SimulatorState>) -> impl Responder {
     let simulator = data.sim.lock().unwrap();
-    let regs = simulator.processor.peek_registers();
+    let regs = simulator.processor.view_registers();
 
     format!("{:?}", regs)
 }
@@ -53,10 +53,17 @@ async fn get_line(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Re
 #[get("/processor/pipeline")]
 async fn get_pipeline(data: web::Data<SimulatorState>) -> Result<impl Responder> {
     let simulator = data.sim.lock().unwrap();
-    let status = simulator.processor.peek_pipeline_instrs();
+    let status = simulator.processor.view_pipeline_instrs();
 
     let status: Vec<Option<simulator::processor::instruction::Instruction>> = status.into_iter().map(|x| x.clone()).collect();
     Ok(web::Json(status))
+}
+
+
+#[get("/processor/pipeline/status")]
+async fn get_pipeline_status(data: web::Data<SimulatorState>) -> Result<impl Responder> {
+    let simulator = data.sim.lock().unwrap();
+    Ok(web::Json(simulator.processor.view_pipeline_status()))
 }
 
 
@@ -79,6 +86,7 @@ async fn main() -> std::io::Result<()> {
             .service(step)
             .service(get_size)
             .service(get_line)
+            .service(get_pipeline_status)
             .service(get_pipeline)
             .service(actix_files::Files::new("/", "./interface/static").show_files_listing())
     })

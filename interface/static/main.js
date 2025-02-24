@@ -22,14 +22,18 @@ async function update_pipeline() {
     const response = await fetch('/processor/pipeline');
     const data = await response.json();
 
+    const status = await fetch('/processor/pipeline/status');
+    const status_data = await status.json();
+    console.log(status_data);
+
     const table = document.getElementById('pipeline-table');
     const row = table.getElementsByTagName("tr")[1];
     
     for (const [i, element] of data.entries()) {
         let td = row.getElementsByTagName("td")[i];
         if (element != null) {
-            console.log(element);
             td.innerHTML = `
+                Stage Status: ${status_data[i]} <br>
                 Raw Instruction: ${element.instr_raw} <br>
                 Instruction Type: ${Object.keys(element.instr_type)} ${element.instr_type[Object.keys(element.instr_type)]} <br>
                 Address Mode: ${element.addr_mode} <br>

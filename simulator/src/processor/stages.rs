@@ -182,5 +182,5 @@ pub fn writeback<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers
             return StageResult::SQUASH;
         }
     }   
-    StageResult::DONE
+    StageResult::COMPLETE
 }

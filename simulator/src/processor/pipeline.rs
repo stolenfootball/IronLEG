@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use serde::Serialize;
 
 use super::instruction::Instruction;
 use super::registers::Registers;
@@ -7,19 +8,17 @@ use crate::memory::Memory;
 
 pub use super::stages::StageType;
 
+#[derive(Serialize, Copy, Clone, Debug, PartialEq)]
 pub enum StageResult {
     DONE,
     WAIT,
     SQUASH,
-}
-
-struct StageStatus {
-    finished: bool,
-    pipeline_on: bool,
+    COMPLETE,
 }
 
 pub struct Stage {
-    status: StageStatus,
+    status: StageResult,
+    pipeline_on: bool,
     instruction: Option<Instruction>,
     mem: Arc<Mutex<Box<dyn Memory>>>,
     regs: Arc<Mutex<Registers>>,
@@ -30,10 +29,8 @@ pub struct Stage {
 impl Stage {
     pub fn create(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, stage_type: StageType, prev_stage: Option<Box<Stage>>) -> Stage {
         Stage {
-            status: StageStatus {
-                finished: false,
-                pipeline_on: true,
-            },
+            status: StageResult::DONE,
+            pipeline_on: true,
             instruction: None,
             mem: mem,
             regs: regs,
@@ -54,19 +51,19 @@ impl Stage {
     }
 
     fn transfer(&mut self) -> Option<Instruction> {
-        self.status.finished = false;
+        self.status = StageResult::WAIT;
         self.instruction.take()
     }
 
     fn load(&mut self) {
         match &mut self.prev_stage {
             Some(prev) => {
-                if self.instruction.is_none() && prev.status.finished {
+                if self.instruction.is_none() && prev.status == StageResult::DONE {
                     self.instruction = prev.transfer();
                 }
             },
             None => {
-                if self.instruction.is_none() && self.status.pipeline_on {
+                if self.instruction.is_none() && self.pipeline_on {
                     self.instruction = Some(Instruction::new())
                 }
             }
@@ -85,15 +82,13 @@ impl Stage {
     pub fn cycle(&mut self) {
         self.load();
         if let Some(instr) = &mut self.instruction {
-            if instr.meta.squashed { self.status.finished = true; }
-            if !self.status.finished { 
-                self.status.finished = match (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr) {
-                    StageResult::DONE => true,
-                    StageResult::WAIT => false,
-                    StageResult::SQUASH => {
-                        self.squash();
-                        true
-                    }
+            if instr.meta.squashed { self.status = StageResult::DONE; }
+            self.status = (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr);
+            if self.status != StageResult::DONE { 
+                match self.status {
+                    StageResult::SQUASH => { self.squash(); self.status = StageResult::DONE },
+                    StageResult::COMPLETE =>  { self.instruction.take(); self.status = StageResult::DONE },
+                    _ => (),
                 }
             }
         }
@@ -105,25 +100,25 @@ impl Stage {
 
 // Functions for external visibility separated out for clarity
 impl Stage {
-    pub fn peek_pipeline_instrs(&self) -> Vec<&Option<Instruction>> {
+    pub fn view_pipeline_instrs(&self) -> Vec<&Option<Instruction>> {
         let mut instrs = match &self.prev_stage {
-            Some(prev) => prev.peek_pipeline_instrs(),
+            Some(prev) => prev.view_pipeline_instrs(),
             None => vec![]
         };
         instrs.push(&self.instruction);
         instrs
     }
 
-    pub fn peek_pipeline_status(&self) -> Vec<bool> {
+    pub fn view_pipeline_status(&self) -> Vec<StageResult> {
         let mut instrs = match &self.prev_stage {
-            Some(prev) => prev.peek_pipeline_status(),
+            Some(prev) => prev.view_pipeline_status(),
             None => vec![]
         };
-        instrs.push(self.status.finished);
+        instrs.push(self.status);
         instrs
     }
 
-    pub fn peek_registers(&self) -> [i32; 16] {
+    pub fn view_registers(&self) -> [i32; 16] {
         self.regs.lock().unwrap().registers
     }
 }
