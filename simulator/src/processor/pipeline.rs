@@ -83,13 +83,13 @@ impl Stage {
         self.load();
         if let Some(instr) = &mut self.instruction {
             if instr.meta.squashed { self.status = StageResult::DONE; }
+            
             self.status = (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr);
-            if self.status != StageResult::DONE { 
-                match self.status {
-                    StageResult::SQUASH => { self.squash(); self.status = StageResult::DONE },
-                    StageResult::COMPLETE =>  { self.instruction.take(); self.status = StageResult::DONE },
-                    _ => (),
-                }
+            
+            if self.status == StageResult::SQUASH { self.squash(); }
+            if self.status == StageResult::SQUASH || self.status == StageResult::COMPLETE { 
+                self.instruction.take(); 
+                self.status = StageResult::DONE 
             }
         }
         if let Some(prev) = &mut self.prev_stage {
