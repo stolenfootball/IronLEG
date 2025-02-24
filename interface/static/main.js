@@ -18,13 +18,44 @@ async function update_registers() {
     }
 }
 
+async function update_pipeline() {
+    const response = await fetch('/processor/pipeline');
+    const data = await response.json();
+
+    const table = document.getElementById('pipeline-table');
+    const row = table.getElementsByTagName("tr")[1];
+    
+    for (const [i, element] of data.entries()) {
+        let td = row.getElementsByTagName("td")[i];
+        if (element != null) {
+            console.log(element);
+            td.innerHTML = `
+                Raw Instruction: ${element.instr_raw} <br>
+                Instruction Type: ${Object.keys(element.instr_type)} ${element.instr_type[Object.keys(element.instr_type)]} <br>
+                Address Mode: ${element.addr_mode} <br>
+                Register 1: ${element.reg_1} <br>
+                Register 2: ${element.reg_2} <br>
+                Immediate: ${element.imm} <br>
+                Result: ${element.meta.result} <br>
+                Squashed: ${element.meta.squashed} <br>
+                Writeback: ${element.meta.writeback} <br>
+            `;
+        } else {
+            td.innerHTML = 'EMPTY';
+        }
+    };
+
+}
+
 async function step() {
     await fetch('/step');
     await update_registers();
+    await update_pipeline();
 }
 
 async function main() {
     await update_registers();
+    await update_pipeline();
 
     document.getElementById('step-button').onclick = step;
 }

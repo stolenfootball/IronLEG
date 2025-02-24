@@ -1,4 +1,6 @@
-#[derive(Debug, Copy, Clone)]
+use serde::Serialize;
+
+#[derive(Debug, Copy, Clone, Serialize)]
 pub enum Register {
     R0,
     R1,

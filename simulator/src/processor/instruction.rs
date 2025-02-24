@@ -1,7 +1,8 @@
+use serde::Serialize;
 
 use super::registers::{Register, Registers};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize)]
 pub enum InstrType {
     ALU(ALUType),
     Memory(MemoryType),
@@ -9,7 +10,7 @@ pub enum InstrType {
     Interrupt(InterruptType),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum AddrMode {
     RegReg,
     RegRegOff,
@@ -31,7 +32,7 @@ impl AddrMode {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum ALUType {
     MOV,
     ADD,
@@ -68,7 +69,7 @@ impl ALUType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum MemoryType {
     LDR,
     STR,
@@ -84,7 +85,7 @@ impl MemoryType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum ControlType {
     BEQ,
     BLT,
@@ -109,7 +110,7 @@ impl ControlType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum InterruptType {
     NOP,
     HLT,
@@ -125,14 +126,14 @@ impl InterruptType {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 pub struct InstrMeta {
     pub writeback: bool,
     pub squashed: bool,
     pub result: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Instruction {
     pub instr_raw: i32,
     pub instr_type: InstrType,
