@@ -24,7 +24,6 @@ async function update_pipeline() {
 
     const status = await fetch('/processor/pipeline/status');
     const status_data = await status.json();
-    console.log(status_data);
 
     const table = document.getElementById('pipeline-table');
     const row = table.getElementsByTagName("tr")[1];
@@ -53,13 +52,27 @@ async function update_pipeline() {
             td.innerHTML = 'EMPTY';
         }
     };
+}
 
+async function update_cycles() {
+    const response = await fetch('/processor/cycles');
+    const data = await response.json();
+
+    document.getElementById('cycles-count').innerHTML = `Cycles: ${data}`;
 }
 
 async function step() {
     await fetch('/step');
     await update_registers();
     await update_pipeline();
+    await update_cycles();
+}
+
+async function run() {
+    await fetch('/run');
+    await update_registers();
+    await update_pipeline();
+    await update_cycles();
 }
 
 async function main() {
@@ -67,6 +80,13 @@ async function main() {
     await update_pipeline();
 
     document.getElementById('step-button').onclick = step;
+    document.getElementById('run-button').onclick = run;
+
+    setInterval(async () => {
+        await update_registers();
+        await update_pipeline();
+        await update_cycles();
+    }, 1000);
 }
 
 main();

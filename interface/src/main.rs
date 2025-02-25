@@ -26,7 +26,26 @@ async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
     let mut simulator = data.sim.lock().unwrap();
     simulator.processor.cycle();
     
-    HttpResponse::Ok().body("1")
+    HttpResponse::Ok().body("🦿")
+}
+
+#[get("/run")]
+async fn run(data: web::Data<SimulatorState>) -> HttpResponse {
+    let mut simulator = data.sim.lock().unwrap();
+    
+    while simulator.processor.cycle() { 
+        if simulator.processor.view_cycles() % 1000 == 0 {
+            println!("{}", simulator.processor.view_cycles());
+        }
+        continue; 
+    }
+    HttpResponse::Ok().body("🦿")
+}
+
+#[get("/processor/cycles")]
+async fn get_cycles(data: web::Data<SimulatorState>) -> Result<impl Responder> {
+    let simulator = data.sim.lock().unwrap();
+    Ok(web::Json(simulator.processor.view_cycles()))
 }
 
 #[get("/memory/size")]
@@ -82,8 +101,10 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(sim.clone())
-            .service(get_regs)
+            .service(run)
             .service(step)
+            .service(get_regs)
+            .service(get_cycles)
             .service(get_size)
             .service(get_line)
             .service(get_pipeline_status)

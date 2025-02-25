@@ -20,6 +20,7 @@ pub enum StageResult {
 pub struct Stage {
     status: StageResult,
     pipeline_on: bool,
+    cycles: u128,
     instruction: Option<Instruction>,
     mem: Arc<Mutex<Box<dyn Memory>>>,
     regs: Arc<Mutex<Registers>>,
@@ -32,6 +33,7 @@ impl Stage {
         Stage {
             status: StageResult::DONE,
             pipeline_on: true,
+            cycles: 0,
             instruction: None,
             mem: mem,
             regs: regs,
@@ -82,8 +84,8 @@ impl Stage {
         }
     }
 
-    pub fn cycle(&mut self) {
-        if self.status == StageResult::HALT { return; }
+    pub fn cycle(&mut self) -> bool {
+        if self.status == StageResult::HALT { return false; }
 
         self.load();
         if let Some(instr) = &mut self.instruction {
@@ -98,6 +100,9 @@ impl Stage {
         if let Some(prev) = &mut self.prev_stage {
             prev.cycle();
         }
+
+        self.cycles += 1;
+        true
     }
 } 
 
@@ -123,5 +128,9 @@ impl Stage {
 
     pub fn view_registers(&self) -> [i32; 16] {
         self.regs.lock().unwrap().registers
+    }
+
+    pub fn view_cycles(&self) -> u128 {
+        self.cycles
     }
 }
