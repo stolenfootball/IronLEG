@@ -54,7 +54,38 @@ async function update_pipeline() {
     };
 }
 
+async function update_memory() {
+    const line = document.getElementById('memory-address-box').value;
+    const memory = await fetch('/memory/line/' + line);
+    const data = await memory.json();
+
+    const tableSpace = document.getElementById("memory-table-space");
+    tableSpace.innerHTML = '';
+
+    for (let i = 0; i < data[0].length; i++) {
+        const tbl = document.createElement('table');
+        tbl.className = "table table-sm table-bordered table-hover";
+
+        const tr = tbl.createTHead().insertRow();
+        tr.insertCell().innerHTML = "<b>Address</b>";
+
+        for (let k = 0; k < data[0][0].length; k++) {
+            tr.insertCell().innerHTML = `<b>+${k * 4}</b>`;
+        }
+
+        for (let x = 0; x < data.length; x++) {
+            const tr = tbl.insertRow();
+            tr.insertCell().innerHTML = `+${x * 64}`;
+            for (let j = 0; j < data[0][0].length; j++) {
+                tr.insertCell().innerHTML = data[x][data[0].length - i - 1][j];
+            }
+        }
+        tableSpace.appendChild(tbl);
+    }
+}
+
 async function update_cycles() {
+
     const response = await fetch('/processor/cycles');
     const data = await response.json();
 
@@ -70,6 +101,7 @@ async function flash() {
         },
         body: JSON.stringify({program: content})
     });
+    await update_memory();
 }
 
 async function step() {
@@ -77,6 +109,7 @@ async function step() {
     await update_registers();
     await update_pipeline();
     await update_cycles();
+    await update_memory();
 }
 
 async function run() {
@@ -84,6 +117,7 @@ async function run() {
     await update_registers();
     await update_pipeline();
     await update_cycles();
+    await update_memory();
 }
 
 async function reset() {
@@ -91,16 +125,19 @@ async function reset() {
     await update_registers();
     await update_pipeline();
     await update_cycles();
+    await update_memory();
 }
 
 async function main() {
     await update_registers();
     await update_pipeline();
+    await update_memory();
 
     document.getElementById('step-button').onclick = step;
     document.getElementById('run-button').onclick = run;
     document.getElementById('reset-button').onclick = reset;
     document.getElementById('flash-button').onclick = flash;
+    document.getElementById('memory-button').onclick = update_memory;
 
     // setInterval(async () => {
     //     await update_registers();

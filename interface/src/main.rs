@@ -82,10 +82,14 @@ async fn get_line(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Re
 
     let simulator = data.sim.lock().unwrap();
     let mem = simulator.memory.lock().unwrap();
-    let lines = mem.view_line(line_num);
 
-    let lines: Vec<Vec<usize>> = lines.into_iter().map(|x| x.clone()).collect();
-    Ok(web::Json(lines))
+    let mut returnable: Vec<Vec<Vec<usize>>> = vec![];
+    for i in line_num..line_num + 5 {
+        let lines = mem.view_line(i);
+        returnable.push(lines.into_iter().map(|x| x.clone()).collect());
+    }
+
+    Ok(web::Json(returnable))
 }
 
 
