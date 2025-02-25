@@ -67,6 +67,10 @@ impl Memory for RAM {
             self.contents[addr.0][addr.1] = program[i / 4];
         }
     }
+
+    fn reset(&mut self) {
+        self.contents = vec![vec![0; self.block_size]; self.size];
+    }
 }
 
 impl Transparency for RAM {

@@ -174,6 +174,17 @@ impl Memory for Cache {
     fn flash(&mut self, program: &Vec<usize>) {
         self.lower_level.flash(program);
     }
+
+    fn reset(&mut self) {
+        self.contents = vec![CacheLine {
+            addr: 0,
+            valid: false,
+            dirty: false,
+            tag: 0,
+            contents: vec![0; self.block_size],
+        }; self.size];
+        self.lower_level.reset();
+    }
 }
 
 impl Transparency for Cache {

@@ -104,6 +104,16 @@ impl Stage {
         self.cycles += 1;
         true
     }
+
+    pub fn reset(&mut self) {
+        self.cycles = 0;
+        self.instruction = None;
+        self.status = StageResult::DONE;
+        self.regs.lock().unwrap().reset();
+        if let Some(prev_stage) = &mut self.prev_stage {
+            prev_stage.reset();
+        }
+    }
 } 
 
 // Functions for external visibility separated out for clarity

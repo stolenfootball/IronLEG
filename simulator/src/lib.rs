@@ -28,4 +28,9 @@ impl Simulator {
         let program: Vec<usize> = program.into_iter().map(|x| *x as usize).collect();
         self.memory.lock().unwrap().flash(&program);
     }
+
+    pub fn reset(&mut self) {
+        self.processor.reset();
+        self.memory.lock().unwrap().reset();
+    }
 }

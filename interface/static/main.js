@@ -75,12 +75,20 @@ async function run() {
     await update_cycles();
 }
 
+async function reset() {
+    await fetch('/reset');
+    await update_registers();
+    await update_pipeline();
+    await update_cycles();
+}
+
 async function main() {
     await update_registers();
     await update_pipeline();
 
     document.getElementById('step-button').onclick = step;
     document.getElementById('run-button').onclick = run;
+    document.getElementById('reset-button').onclick = reset;
 
     setInterval(async () => {
         await update_registers();

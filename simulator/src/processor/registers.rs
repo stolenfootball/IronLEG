@@ -77,5 +77,10 @@ impl Registers {
     pub fn clear_in_use(&mut self) {
         self.in_use.iter_mut().for_each(|x| *x = false);
     }
+
+    pub fn reset(&mut self) {
+        self.clear_in_use();
+        self.registers = [0; 16];
+    }
 }
 

@@ -34,13 +34,22 @@ async fn run(data: web::Data<SimulatorState>) -> HttpResponse {
     let mut simulator = data.sim.lock().unwrap();
     
     while simulator.processor.cycle() { 
-        if simulator.processor.view_cycles() % 1000 == 0 {
+        if simulator.processor.view_cycles() % 100000 == 0 {
             println!("{}", simulator.processor.view_cycles());
         }
-        continue; 
+        if simulator.processor.view_cycles() % 10000000 == 0 {
+            break;
+        }
     }
     HttpResponse::Ok().body("🦿")
 }
+
+#[get("/reset")]
+async fn reset(data: web::Data<SimulatorState>) -> HttpResponse {
+    data.sim.lock().unwrap().reset();
+    HttpResponse::Ok().body("🦿")
+}
+
 
 #[get("/processor/cycles")]
 async fn get_cycles(data: web::Data<SimulatorState>) -> Result<impl Responder> {
@@ -103,6 +112,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(sim.clone())
             .service(run)
             .service(step)
+            .service(reset)
             .service(get_regs)
             .service(get_cycles)
             .service(get_size)
