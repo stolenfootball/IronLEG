@@ -61,6 +61,17 @@ async function update_cycles() {
     document.getElementById('cycles-count').innerHTML = `Cycles: ${data}`;
 }
 
+async function flash() {
+    let content = document.getElementById('leg-code').value;
+    await fetch('/flash', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({program: content})
+    });
+}
+
 async function step() {
     await fetch('/step');
     await update_registers();
@@ -89,12 +100,13 @@ async function main() {
     document.getElementById('step-button').onclick = step;
     document.getElementById('run-button').onclick = run;
     document.getElementById('reset-button').onclick = reset;
+    document.getElementById('flash-button').onclick = flash;
 
-    setInterval(async () => {
-        await update_registers();
-        await update_pipeline();
-        await update_cycles();
-    }, 1000);
+    // setInterval(async () => {
+    //     await update_registers();
+    //     await update_pipeline();
+    //     await update_cycles();
+    // }, 1000);
 }
 
 main();
