@@ -105,20 +105,20 @@ pub fn execute<'a>(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>
     let regs = regs.lock().unwrap();
     match instr.instr_type {
         InstrType::ALU(opcode) => {
-            match opcode {
-                ALUType::MOV  => instr.meta.result = instr.get_arg_2(&regs) + instr.imm,
-                ALUType::ADD  => instr.meta.result = instr.get_arg_1(&regs) + instr.get_arg_2(&regs) + instr.imm,
-                ALUType::SUB  => instr.meta.result = instr.get_arg_1(&regs) - instr.get_arg_2(&regs) + instr.imm,
-                ALUType::IMUL => instr.meta.result = instr.get_arg_1(&regs) * instr.get_arg_2(&regs) + instr.imm,
-                ALUType::IDIV => instr.meta.result = instr.get_arg_1(&regs) / instr.get_arg_2(&regs) + instr.imm,
-                ALUType::AND  => instr.meta.result = instr.get_arg_1(&regs) & instr.get_arg_2(&regs) + instr.imm,
-                ALUType::OR   => instr.meta.result = instr.get_arg_1(&regs) | instr.get_arg_2(&regs) + instr.imm,
-                ALUType::XOR  => instr.meta.result = instr.get_arg_1(&regs) ^ instr.get_arg_2(&regs) + instr.imm,
-                ALUType::CMP  => instr.meta.result = instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::MOD  => instr.meta.result = instr.get_arg_1(&regs) % instr.get_arg_2(&regs) + instr.imm,
-                ALUType::NOT  => instr.meta.result = !(instr.get_arg_1(&regs) + instr.imm),
-                ALUType::LSL  => instr.meta.result = instr.get_arg_1(&regs) << instr.get_arg_2(&regs) + instr.imm,
-                ALUType::LSR  => instr.meta.result = instr.get_arg_1(&regs) >> instr.get_arg_2(&regs) + instr.imm,
+            instr.meta.result = match opcode {
+                ALUType::MOV  => instr.get_arg_2(&regs) + instr.imm,
+                ALUType::ADD  => instr.get_arg_1(&regs) + (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::SUB  => instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::IMUL => instr.get_arg_1(&regs) * (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::IDIV => instr.get_arg_1(&regs) / (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::AND  => instr.get_arg_1(&regs) & (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::OR   => instr.get_arg_1(&regs) | (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::XOR  => instr.get_arg_1(&regs) ^ (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::CMP  => instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::MOD  => instr.get_arg_1(&regs) % (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::NOT  => !(instr.get_arg_1(&regs) + instr.imm),
+                ALUType::LSL  => instr.get_arg_1(&regs) << (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::LSR  => instr.get_arg_1(&regs) >> (instr.get_arg_2(&regs) + instr.imm),
             };
             StageResult::DONE
         },

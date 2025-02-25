@@ -170,7 +170,7 @@ impl Instruction {
             AddrMode::RegReg => regs.get_reg(self.reg_1),
             AddrMode::RegRegOff => regs.get_reg(self.reg_1),
             AddrMode::RegImm => regs.get_reg(self.reg_1),
-            AddrMode::Imm => self.imm,
+            AddrMode::Imm => 0,
             AddrMode::Reg => regs.get_reg(self.reg_1),
         }
     }
@@ -179,9 +179,9 @@ impl Instruction {
         match self.addr_mode {
             AddrMode::RegReg => regs.get_reg(self.reg_2),
             AddrMode::RegRegOff => regs.get_reg(self.reg_2),
-            AddrMode::RegImm => self.imm,
+            AddrMode::RegImm => 0,
             AddrMode::Imm => 0,
-            AddrMode::Reg => regs.get_reg(self.reg_1),
+            AddrMode::Reg => 0,
         }
     }
 }
