@@ -128,8 +128,8 @@ fn parse_line(input: &str) -> u32 {
 
     if ops.len() == 1 {
         instr |= match ops[0].0 {
-            AddrMode::Imm => 0b100 << 22 | ops[0].1,
-            AddrMode::Reg => 0b101 << 22 | ops[0].1 << 18,
+            AddrMode::Imm => 0b011 << 22 | ops[0].1,
+            AddrMode::Reg => 0b100 << 22 | ops[0].1 << 18,
             _ => panic!("How???")
         }
     }
