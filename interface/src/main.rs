@@ -14,9 +14,13 @@ struct SimulatorState {
 #[get("/registers")]
 async fn get_regs(data: web::Data<SimulatorState>) -> impl Responder {
     let simulator = data.sim.lock().unwrap();
-    let regs = simulator.processor.view_registers();
+    web::Json(simulator.processor.view_registers())
+}
 
-    format!("{:?}", regs)
+#[get("/registers/status")]
+async fn get_regs_status(data: web::Data<SimulatorState>) -> impl Responder {
+    let simulator = data.sim.lock().unwrap();
+    web::Json(simulator.processor.view_register_status())
 }
 
 #[get("/step")]
@@ -123,6 +127,7 @@ async fn main() -> std::io::Result<()> {
             .service(step)
             .service(reset)
             .service(flash)
+            .service(get_regs_status)
             .service(get_regs)
             .service(get_cycles)
             .service(get_size)
