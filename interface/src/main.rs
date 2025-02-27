@@ -35,14 +35,7 @@ async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
 async fn run(data: web::Data<SimulatorState>) -> HttpResponse {
     let mut simulator = data.sim.lock().unwrap();
     
-    while simulator.processor.cycle() { 
-        if simulator.processor.view_cycles() % 100000 == 0 {
-            println!("{}", simulator.processor.view_cycles());
-        }
-        if simulator.processor.view_cycles() % 10000000 == 0 {
-            break;
-        }
-    }
+    while simulator.processor.cycle() {}
     HttpResponse::Ok().body("🦿")
 }
 

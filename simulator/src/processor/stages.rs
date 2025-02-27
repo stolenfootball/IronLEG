@@ -153,6 +153,7 @@ pub fn memory<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>,
             MemoryType::LDR => {
                 if let Some(MemoryValue::Value(response)) = mem.read(mem_addr, StageType::Memory, false) {
                     instr.meta.result = response as i32;
+                    return StageResult::DONE;
                 }
                 StageResult::WAIT
             },

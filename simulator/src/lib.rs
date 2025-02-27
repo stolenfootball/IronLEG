@@ -15,7 +15,7 @@ pub struct Simulator {
 impl Simulator {
     pub fn new() -> Simulator {
         let ram = Box::new(memory::RAM::new(65536, 16, 4, 5));
-        let cache = Box::new(memory::Cache::new(2048, 16, 4, 1, 2, ram));
+        let cache = Box::new(memory::Cache::new(16384, 16, 4, 1, 2, ram));
         let memory: Arc<Mutex<Box<dyn Memory>>> = Arc::new(Mutex::new(cache));
 
         Simulator {
