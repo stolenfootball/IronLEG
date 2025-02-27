@@ -132,7 +132,7 @@ pub fn execute<'a>(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>
                 ControlType::BGE  => regs.get_reg(Register::BF) >= 0,
                 ControlType::BLE  => regs.get_reg(Register::BF) <= 0,
             } { 
-                instr.meta.result = instr.get_arg_1(&regs) 
+                instr.meta.result = instr.get_arg_1(&regs) + instr.imm
             } else { 
                 instr.meta.writeback = false 
             }
