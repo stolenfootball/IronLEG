@@ -47,7 +47,7 @@ impl Register {
 #[derive(Debug)]
 pub struct Registers {
     pub registers: [i32; 16],
-    in_use: [bool; 16],
+    pub in_use: [bool; 16],
 }
 
 impl Registers {

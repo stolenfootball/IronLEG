@@ -14,11 +14,11 @@ pub mod stages;
 pub fn new(mem: Arc<Mutex<Box<dyn Memory>>>) -> Box<pipeline::Stage> {
     let regs = Arc::new(Mutex::new(Registers::new()));
 
-    let fetch_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Fetch, None));
-    let decode_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Decode, Some(fetch_stage)));
-    let execute_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Execute, Some(decode_stage)));
-    let memory_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Memory, Some(execute_stage)));
-    let writeback_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Writeback, Some(memory_stage)));
+    let fetch_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Fetch, None, false));
+    let decode_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Decode, Some(fetch_stage), false));
+    let execute_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Execute, Some(decode_stage), false));
+    let memory_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Memory, Some(execute_stage), false));
+    let writeback_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Writeback, Some(memory_stage), true));
 
     writeback_stage
 }

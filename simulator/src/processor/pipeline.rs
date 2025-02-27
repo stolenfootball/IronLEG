@@ -18,10 +18,11 @@ pub enum StageResult {
 }
 
 pub struct Stage {
-    status: StageResult,
+    pub status: StageResult,
+    is_head: bool,
     pipeline_on: bool,
     cycles: u128,
-    instruction: Option<Instruction>,
+    pub instruction: Option<Instruction>,
     mem: Arc<Mutex<Box<dyn Memory>>>,
     regs: Arc<Mutex<Registers>>,
     prev_stage: Option<Box<Stage>>,
@@ -29,10 +30,11 @@ pub struct Stage {
 }
 
 impl Stage {
-    pub fn create(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, stage_type: StageType, prev_stage: Option<Box<Stage>>) -> Stage {
+    pub fn create(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, stage_type: StageType, prev_stage: Option<Box<Stage>>, is_head: bool) -> Stage {
         Stage {
             status: StageResult::DONE,
             pipeline_on: true,
+            is_head: is_head,
             cycles: 0,
             instruction: None,
             mem: mem,
@@ -86,21 +88,20 @@ impl Stage {
 
     pub fn cycle(&mut self) -> bool {
         if self.status == StageResult::HALT { return false; }
-
+        
         self.load();
         if let Some(instr) = &mut self.instruction {
-            self.status = (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr);
-
-            if self.status == StageResult::SQUASH { self.squash(); }
-            if self.status == StageResult::SQUASH || self.status == StageResult::COMPLETE { 
-                self.instruction = None; 
-                self.status = StageResult::DONE 
+            if instr.meta.squashed { self.status =  StageResult::DONE }
+            if self.status !=  StageResult::DONE || self.is_head {
+                self.status = (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr);
             }
+            if self.status == StageResult::SQUASH { self.squash(); self.status = StageResult::DONE }
+            if self.status ==  StageResult::DONE && self.is_head { self.instruction = None }
         }
         if let Some(prev) = &mut self.prev_stage {
             prev.cycle();
         }
-
+        
         self.cycles += 1;
         true
     }
@@ -142,5 +143,9 @@ impl Stage {
 
     pub fn view_cycles(&self) -> u128 {
         self.cycles
+    }
+
+    pub fn view_register_status(&self) -> [bool; 16] {
+        self.regs.lock().unwrap().in_use
     }
 }

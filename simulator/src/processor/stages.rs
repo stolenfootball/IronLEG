@@ -170,7 +170,7 @@ pub fn memory<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>,
 }
 
 pub fn writeback<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
-    if instr.meta.squashed { return StageResult::COMPLETE }
+    if instr.meta.squashed { return StageResult::DONE }
 
     let mut regs = regs.lock().unwrap();
     if instr.meta.writeback {
@@ -190,5 +190,5 @@ pub fn writeback<'a>(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers
         return StageResult::HALT;
     }
 
-    StageResult::COMPLETE
+    StageResult::DONE
 }
