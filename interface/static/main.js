@@ -1,10 +1,4 @@
-async function update_registers() {
-    const response = await fetch('/registers');
-    const data = await response.json();
-
-    const status = await fetch('/registers/status');
-    const status_data = await status.json();
-
+async function update_registers(reg_contents, reg_status) {
     const reg_names = ["R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "SP", "BF", "LR", "PC"];
 
     const registersList = document.getElementById('registers-list');
@@ -13,29 +7,23 @@ async function update_registers() {
     for (const [i, value] of reg_names.entries()) {
         registersList.innerHTML += `
         <div class="col-6 col-lg-3 mb-2">
-            <div class="border rounded p-2 ${status_data[i] ? 'bg-warning' : ''}">
+            <div class="border rounded p-2 ${reg_status[i] ? 'bg-warning' : ''}">
                 <small>${value}</small>
-                <div class="font-monospace">${data[i]}</div>
+                <div class="font-monospace">${reg_contents[i]}</div>
             </div>
         </div>`
     }
 }
 
-async function update_pipeline() {
-    const response = await fetch('/processor/pipeline');
-    const data = await response.json();
-
-    const status = await fetch('/processor/pipeline/status');
-    const status_data = await status.json();
-
+async function update_pipeline(pipe_contents, pipe_status) {
     const table = document.getElementById('pipeline-table');
     const row = table.getElementsByTagName("tr")[1];
-    
-    for (const [i, element] of data.entries()) {
+
+    for (const [i, element] of pipe_contents.entries()) {
         let td = row.getElementsByTagName("td")[i];
         if (element != null) {
             td.innerHTML = `
-                Stage Status: ${status_data[i]} <br>
+                Stage Status: ${pipe_status[i]} <br>
                 Raw Instruction: ${element.instr_raw} <br>
             `;
             if (i > 0) {
@@ -57,11 +45,7 @@ async function update_pipeline() {
     };
 }
 
-async function update_memory() {
-    const line = document.getElementById('memory-address-box').value;
-    const memory = await fetch('/memory/line/' + line);
-    const data = await memory.json();
-
+async function update_memory(data) {
     const tableSpace = document.getElementById("memory-table-space");
     tableSpace.innerHTML = '';
 
@@ -88,8 +72,7 @@ async function update_memory() {
 }
 
 async function update_cycles() {
-
-    const response = await fetch('/processor/cycles');
+    const response = await fetch('/cycles');
     const data = await response.json();
 
     document.getElementById('cycles-count').innerHTML = `Cycles: ${data}`;
@@ -104,37 +87,40 @@ async function flash() {
         },
         body: JSON.stringify({program: content})
     });
-    await update_memory();
+    await refresh_ui();
+}
+
+async function refresh_ui() {
+    const line = document.getElementById('memory-address-box').value;
+    console.log(line ? line : '0');
+
+    const response = await fetch('/refresh/' + (line ? line : '0'));
+    const data = await response.json();
+
+    document.getElementById('cycles-count').innerHTML = `Cycles: ${data.num_cycles}`;
+
+    await update_registers(data.register_values, data.register_status);
+    await update_pipeline(data.pipeline_values, data.pipeline_status);
+    await update_memory(data.memory_contents);
 }
 
 async function step() {
     await fetch('/step');
-    await update_registers();
-    await update_pipeline();
-    await update_cycles();
-    await update_memory();
+    await refresh_ui();
 }
 
 async function run() {
     await fetch('/run');
-    await update_registers();
-    await update_pipeline();
-    await update_cycles();
-    await update_memory();
+    await refresh_ui();
 }
 
 async function reset() {
     await fetch('/reset');
-    await update_registers();
-    await update_pipeline();
-    await update_cycles();
-    await update_memory();
+    await refresh_ui();
 }
 
 async function main() {
-    await update_registers();
-    await update_pipeline();
-    await update_memory();
+    await refresh_ui();
 
     document.getElementById('step-button').onclick = step;
     document.getElementById('run-button').onclick = run;
