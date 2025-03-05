@@ -86,7 +86,7 @@ impl Stage {
         }
     }
 
-    pub fn cycle(&mut self) -> bool {
+    pub async fn cycle(&mut self) -> bool {
         if self.status == StageResult::HALT { return false; }
         
         self.load();
@@ -99,7 +99,7 @@ impl Stage {
             if self.status ==  StageResult::DONE && self.is_head { self.instruction = None }
         }
         if let Some(prev) = &mut self.prev_stage {
-            prev.cycle();
+            Box::pin(prev.cycle()).await;
         }
         
         self.cycles += 1;
@@ -141,7 +141,7 @@ impl Stage {
         self.regs.lock().unwrap().registers
     }
 
-    pub fn view_cycles(&self) -> u128 {
+    pub async fn view_cycles(&self) -> u128 {
         self.cycles
     }
 

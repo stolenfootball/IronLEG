@@ -16,7 +16,7 @@ struct SimulatorState {
 #[get("/step")]
 async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
     let mut simulator = data.sim.lock().unwrap();
-    simulator.processor.cycle();
+    simulator.processor.cycle().await;
     
     HttpResponse::Ok().body("🦿")
 }
@@ -24,7 +24,7 @@ async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
 #[get("/run")]
 async fn run(data: web::Data<SimulatorState>) -> HttpResponse {
     let mut simulator = data.sim.lock().unwrap();
-    while simulator.processor.cycle() {}
+    while simulator.processor.cycle().await {}
     
     HttpResponse::Ok().body("🦿")
 }
@@ -56,7 +56,7 @@ async fn flash(program: web::Json<Program>, data: web::Data<SimulatorState>) -> 
 #[get("/cycles")]
 async fn get_cycles(data: web::Data<SimulatorState>) -> Result<impl Responder> {
     let simulator = data.sim.lock().unwrap();
-    Ok(web::Json(simulator.processor.view_cycles()))
+    Ok(web::Json(simulator.processor.view_cycles().await))
 }
 
 #[derive(Serialize, Debug)]
@@ -83,7 +83,7 @@ async fn refresh(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Res
     }
     
     Ok(web::Json(UserInterfaceData {
-        num_cycles: simulator.processor.view_cycles(),
+        num_cycles: simulator.processor.view_cycles().await,
         register_values: simulator.processor.view_registers(),
         register_status: simulator.processor.view_register_status(),
         memory_contents: memory_contents,
