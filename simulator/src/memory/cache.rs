@@ -56,9 +56,9 @@ impl Cache {
     fn cache_location(&self, addr: usize) -> CacheLocation {
         let addr = self.align(addr);
         CacheLocation {
-            offset: addr / self.word_size & self.block_size - 1,
-            index: addr % self.size,
-            tag: addr / self.size,
+            offset: (addr / self.word_size) % self.block_size,
+            index:  (addr / (self.word_size * self.block_size * self.associativity)) % self.size,
+            tag:    (addr / (self.word_size * self.block_size * self.associativity)) / self.size,
         }
     }
 
