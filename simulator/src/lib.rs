@@ -24,9 +24,9 @@ impl Simulator {
         }
     }
 
-    pub fn flash(&mut self, program: &Vec<u32>) {
+    pub fn flash(&mut self, addr: usize, program: &Vec<u32>) {
         let program: Vec<usize> = program.into_iter().map(|x| *x as usize).collect();
-        self.memory.lock().unwrap().flash(&program);
+        self.memory.lock().unwrap().flash(addr, &program);
     }
 
     pub fn reset(&mut self) {

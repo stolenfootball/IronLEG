@@ -47,7 +47,7 @@ async fn flash(program: web::Json<Program>, data: web::Data<SimulatorState>) -> 
     let mut simulator = data.sim.lock().unwrap();
 
     let bytecode = assembler::assemble(&program.program);
-    simulator.flash(&bytecode);
+    simulator.flash(0, &bytecode);
 
     HttpResponse::Ok().body("🦿")
 }
@@ -78,7 +78,7 @@ async fn refresh(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Res
     let line_num = path.into_inner();
 
     let mut memory_contents: Vec<Vec<Vec<usize>>> = vec![];
-    for i in line_num..line_num + 5 {
+    for i in line_num..line_num + 6 {
         memory_contents.push(mem.view_line(i).into_iter().map(|x| x.clone()).collect());
     }
     

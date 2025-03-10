@@ -61,9 +61,10 @@ impl Memory for RAM {
         self.access.reset_access_state();
     }
 
-    fn flash(&mut self, program: &Vec<usize>) {
+    fn flash(&mut self, addr: usize, program: &Vec<usize>) {
+        let addr = self.align(addr);
         for i in (0..(program.len() * 4)).step_by(4) {
-            let addr = self.addr_to_offset(i);
+            let addr = self.addr_to_offset(addr + i);
             self.contents[addr.0][addr.1] = program[i / 4];
         }
     }

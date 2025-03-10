@@ -128,9 +128,9 @@ async function main() {
     document.getElementById('flash-button').onclick = flash;
     document.getElementById('memory-button').onclick = update_memory;
 
-    setInterval(async () => {
-        await update_cycles();
-    }, 100);
+//     setInterval(async () => {
+//         await update_cycles();
+//     }, 100);
 }
 
 main();
