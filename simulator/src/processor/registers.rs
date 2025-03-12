@@ -44,19 +44,10 @@ impl Register {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Registers {
     pub registers: [i32; 16],
     pub in_use: [bool; 16],
-}
-
-impl Default for Registers {
-    fn default() -> Self {
-        Registers {
-            registers: [0; 16],
-            in_use: [false; 16],
-        }
-    }
 }
 
 impl Registers {
