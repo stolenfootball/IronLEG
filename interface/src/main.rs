@@ -4,7 +4,7 @@ use simulator::processor::pipeline::StageResult;
 
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 
 struct SimulatorState {
@@ -13,7 +13,7 @@ struct SimulatorState {
 
 #[get("/step")]
 async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
-    let mut simulator = data.sim.lock().unwrap();
+    let mut simulator = data.sim.lock().await;
     simulator.processor.cycle().await;
     
     HttpResponse::Ok().body("🦿")
@@ -21,7 +21,7 @@ async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
 
 #[get("/run")]
 async fn run(data: web::Data<SimulatorState>) -> HttpResponse {
-    let mut simulator = data.sim.lock().unwrap();
+    let mut simulator = data.sim.lock().await;
     while simulator.processor.cycle().await {}
     
     HttpResponse::Ok().body("🦿")
@@ -29,7 +29,7 @@ async fn run(data: web::Data<SimulatorState>) -> HttpResponse {
 
 #[get("/reset")]
 async fn reset(data: web::Data<SimulatorState>) -> HttpResponse {
-    let mut simulator = data.sim.lock().unwrap();
+    let mut simulator = data.sim.lock().await;
     simulator.reset();
 
     HttpResponse::Ok().body("🦿")
@@ -42,7 +42,7 @@ struct Program {
 
 #[post("/flash")]
 async fn flash(program: web::Json<Program>, data: web::Data<SimulatorState>) -> HttpResponse {
-    let mut simulator = data.sim.lock().unwrap();
+    let mut simulator = data.sim.lock().await;
 
     let bytecode = assembler::assemble(&program.program);
     simulator.flash(0, &bytecode);
@@ -53,7 +53,7 @@ async fn flash(program: web::Json<Program>, data: web::Data<SimulatorState>) -> 
 
 #[get("/cycles")]
 async fn get_cycles(data: web::Data<SimulatorState>) -> Result<impl Responder> {
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     Ok(web::Json(simulator.processor.view_cycles().await))
 }
 
@@ -70,7 +70,7 @@ struct UserInterfaceData {
 
 #[get("/refresh/{line_num}")]
 async fn refresh(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Result<impl Responder> {
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     let mem = simulator.memory.lock().unwrap();
 
     let line_num = path.into_inner();
@@ -92,20 +92,20 @@ async fn refresh(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Res
 
 #[get("/registers")]
 async fn get_regs(data: web::Data<SimulatorState>) -> impl Responder {
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     web::Json(simulator.processor.view_registers())
 }
 
 #[get("/registers/status")]
 async fn get_regs_status(data: web::Data<SimulatorState>) -> impl Responder {
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     web::Json(simulator.processor.view_register_status())
 }
 
 
 #[get("/memory/size")]
 async fn get_size(data: web::Data<SimulatorState>) -> Result<impl Responder> {
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     let size = simulator.memory.lock().unwrap().view_size();
 
     Ok(web::Json(size))
@@ -115,7 +115,7 @@ async fn get_size(data: web::Data<SimulatorState>) -> Result<impl Responder> {
 async fn get_line(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Result<impl Responder> {
     let line_num = path.into_inner();
 
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     let mem = simulator.memory.lock().unwrap();
 
     let mut returnable: Vec<Vec<Vec<usize>>> = vec![];
@@ -130,7 +130,7 @@ async fn get_line(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Re
 
 #[get("/processor/pipeline")]
 async fn get_pipeline(data: web::Data<SimulatorState>) -> Result<impl Responder> {
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     let status = simulator.processor.view_pipeline_instrs();
 
     let status: Vec<Option<simulator::processor::instruction::Instruction>> = status.into_iter().cloned().collect();
@@ -140,7 +140,7 @@ async fn get_pipeline(data: web::Data<SimulatorState>) -> Result<impl Responder>
 
 #[get("/processor/pipeline/status")]
 async fn get_pipeline_status(data: web::Data<SimulatorState>) -> Result<impl Responder> {
-    let simulator = data.sim.lock().unwrap();
+    let simulator = data.sim.lock().await;
     Ok(web::Json(simulator.processor.view_pipeline_status()))
 }
 
