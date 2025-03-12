@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use crate::processor::pipeline;
 use crate::memory::Memory;
+use crate::processor::pipeline;
 
-pub mod memory;
 pub mod assembler;
+pub mod memory;
 pub mod processor;
 
 pub struct Simulator {

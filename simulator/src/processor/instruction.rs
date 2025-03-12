@@ -27,7 +27,7 @@ impl AddrMode {
             0b010 => AddrMode::RegImm,
             0b011 => AddrMode::Imm,
             0b100 => AddrMode::Reg,
-            _ => panic!("AddrMode convert failure: {}", mode)
+            _ => panic!("AddrMode convert failure: {}", mode),
         }
     }
 }
@@ -64,7 +64,7 @@ impl ALUType {
             0b1010 => ALUType::NOT,
             0b1011 => ALUType::LSL,
             0b1100 => ALUType::LSR,
-            _ => panic!("ALUType convert failure: {}", alu_type)
+            _ => panic!("ALUType convert failure: {}", alu_type),
         }
     }
 }
@@ -80,7 +80,7 @@ impl MemoryType {
         match mem_type {
             0b0000 => MemoryType::LDR,
             0b0001 => MemoryType::STR,
-            _ => panic!("MemoryType convert failure: {}", mem_type)
+            _ => panic!("MemoryType convert failure: {}", mem_type),
         }
     }
 }
@@ -105,7 +105,7 @@ impl ControlType {
             0b0100 => ControlType::B,
             0b0101 => ControlType::BGE,
             0b0110 => ControlType::BLE,
-            _ => panic!("ControlType convert failure: {}", ctrl_type)
+            _ => panic!("ControlType convert failure: {}", ctrl_type),
         }
     }
 }
@@ -120,11 +120,10 @@ impl InterruptType {
         match int_type {
             0b0000 => InterruptType::NOP,
             0b0001 => InterruptType::HLT,
-            _ => panic!("InterruptType convert failure: {}", int_type)
+            _ => panic!("InterruptType convert failure: {}", int_type),
         }
     }
 }
-
 
 #[derive(Debug, Serialize, Clone)]
 pub struct InstrMeta {

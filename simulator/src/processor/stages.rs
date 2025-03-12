@@ -2,10 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use crate::memory::MemoryValue;
 
+use super::instruction::{
+    ALUType, AddrMode, ControlType, InstrType, Instruction, InterruptType, MemoryType,
+};
+use super::pipeline::{SimMemory, StageResult};
 use super::registers::{Register, Registers};
-use super::instruction::{Instruction, ALUType, AddrMode, ControlType, InstrType, InterruptType, MemoryType};
-use super::pipeline::{StageResult, SimMemory};
-
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum StageType {
@@ -16,19 +17,28 @@ pub enum StageType {
     Writeback,
 }
 
-
 pub fn fetch(mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
     let instr_addr = regs.lock().unwrap().get_reg(Register::PC) as usize;
-    if let Some(MemoryValue::Value(value)) = mem.lock().unwrap().read(instr_addr, StageType::Fetch, false) {
+    if let Some(MemoryValue::Value(value)) =
+        mem.lock()
+            .unwrap()
+            .read(instr_addr, StageType::Fetch, false)
+    {
         instr.instr_raw = value as i32;
         instr.meta.initialized = true;
-        regs.lock().unwrap().set_reg(Register::PC, (instr_addr + 4) as i32);
+        regs.lock()
+            .unwrap()
+            .set_reg(Register::PC, (instr_addr + 4) as i32);
         return StageResult::DONE;
     }
     StageResult::WAIT
 }
 
-pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+pub fn decode(
+    _mem: SimMemory,
+    regs: Arc<Mutex<Registers>>,
+    instr: &mut Instruction,
+) -> StageResult {
     let raw = instr.instr_raw;
 
     let opcode = (raw >> 25) & 0xF;
@@ -37,11 +47,10 @@ pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruct
         0b001 => InstrType::Memory(MemoryType::from_i32(opcode)),
         0b010 => InstrType::Control(ControlType::from_i32(opcode)),
         0b011 => InstrType::Interrupt(InterruptType::from_i32(opcode)),
-        _ => panic!("balls")
+        _ => panic!("balls"),
     };
-    
-    instr.addr_mode = AddrMode::from_i32((raw >> 22) & 0x7);
 
+    instr.addr_mode = AddrMode::from_i32((raw >> 22) & 0x7);
 
     let mut regs = regs.lock().unwrap();
     match instr.addr_mode {
@@ -53,7 +62,7 @@ pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruct
             if regs.is_in_use(instr.reg_1) || regs.is_in_use(instr.reg_2) {
                 return StageResult::WAIT;
             }
-        },
+        }
         AddrMode::RegRegOff => {
             instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
             instr.reg_2 = Register::from_i32((raw >> 14) & 0xF);
@@ -63,7 +72,7 @@ pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruct
             if regs.is_in_use(instr.reg_1) || regs.is_in_use(instr.reg_2) {
                 return StageResult::WAIT;
             }
-        },
+        }
         AddrMode::RegImm => {
             instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
             instr.imm = raw & 0xFFF;
@@ -72,10 +81,8 @@ pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruct
             if regs.is_in_use(instr.reg_1) {
                 return StageResult::WAIT;
             }
-        },
-        AddrMode::Imm => {
-            instr.imm = raw & 0x3FFFFF
-        },
+        }
+        AddrMode::Imm => instr.imm = raw & 0x3FFFFF,
         AddrMode::Reg => {
             instr.reg_1 = Register::from_i32((raw >> 18) & 0xF);
             instr.dest = instr.reg_1;
@@ -83,7 +90,7 @@ pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruct
             if regs.is_in_use(instr.reg_1) {
                 return StageResult::WAIT;
             }
-        },
+        }
     }
 
     if let InstrType::ALU(value) = instr.instr_type {
@@ -93,51 +100,57 @@ pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruct
     }
 
     if let InstrType::Control(_) = instr.instr_type {
-        if regs.is_in_use(Register::BF) { return StageResult::WAIT; }
+        if regs.is_in_use(Register::BF) {
+            return StageResult::WAIT;
+        }
         instr.dest = Register::PC;
     }
-            
+
     regs.set_in_use(instr.dest, true);
     StageResult::DONE
 }
 
-pub fn execute(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+pub fn execute(
+    _mem: SimMemory,
+    regs: Arc<Mutex<Registers>>,
+    instr: &mut Instruction,
+) -> StageResult {
     let regs = regs.lock().unwrap();
     match instr.instr_type {
         InstrType::ALU(opcode) => {
             instr.meta.result = match opcode {
-                ALUType::MOV  => instr.get_arg_2(&regs) + instr.imm,
-                ALUType::ADD  => instr.get_arg_1(&regs) + (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::SUB  => instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::MOV => instr.get_arg_2(&regs) + instr.imm,
+                ALUType::ADD => instr.get_arg_1(&regs) + (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::SUB => instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
                 ALUType::IMUL => instr.get_arg_1(&regs) * (instr.get_arg_2(&regs) + instr.imm),
                 ALUType::IDIV => instr.get_arg_1(&regs) / (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::AND  => instr.get_arg_1(&regs) & (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::OR   => instr.get_arg_1(&regs) | (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::XOR  => instr.get_arg_1(&regs) ^ (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::CMP  => instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::MOD  => instr.get_arg_1(&regs) % (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::NOT  => !(instr.get_arg_1(&regs) + instr.imm),
-                ALUType::LSL  => instr.get_arg_1(&regs) << (instr.get_arg_2(&regs) + instr.imm),
-                ALUType::LSR  => instr.get_arg_1(&regs) >> (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::AND => instr.get_arg_1(&regs) & (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::OR => instr.get_arg_1(&regs) | (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::XOR => instr.get_arg_1(&regs) ^ (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::CMP => instr.get_arg_1(&regs) - (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::MOD => instr.get_arg_1(&regs) % (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::NOT => !(instr.get_arg_1(&regs) + instr.imm),
+                ALUType::LSL => instr.get_arg_1(&regs) << (instr.get_arg_2(&regs) + instr.imm),
+                ALUType::LSR => instr.get_arg_1(&regs) >> (instr.get_arg_2(&regs) + instr.imm),
             };
             StageResult::DONE
-        },
+        }
         InstrType::Control(opcode) => {
             if match opcode {
-                ControlType::BEQ  => regs.get_reg(Register::BF) == 0,
-                ControlType::BLT  => regs.get_reg(Register::BF) <  0,
-                ControlType::BGT  => regs.get_reg(Register::BF) >  0,
-                ControlType::BNE  => regs.get_reg(Register::BF) != 0,
-                ControlType::B    => true,
-                ControlType::BGE  => regs.get_reg(Register::BF) >= 0,
-                ControlType::BLE  => regs.get_reg(Register::BF) <= 0,
-            } { 
+                ControlType::BEQ => regs.get_reg(Register::BF) == 0,
+                ControlType::BLT => regs.get_reg(Register::BF) < 0,
+                ControlType::BGT => regs.get_reg(Register::BF) > 0,
+                ControlType::BNE => regs.get_reg(Register::BF) != 0,
+                ControlType::B => true,
+                ControlType::BGE => regs.get_reg(Register::BF) >= 0,
+                ControlType::BLE => regs.get_reg(Register::BF) <= 0,
+            } {
                 instr.meta.result = instr.get_arg_1(&regs) + instr.imm
-            } else { 
-                instr.meta.writeback = false 
+            } else {
+                instr.meta.writeback = false
             }
             StageResult::DONE
-        },
+        }
         InstrType::Memory(_opcode) => StageResult::DONE,
         InstrType::Interrupt(_opcode) => StageResult::DONE,
     }
@@ -147,31 +160,43 @@ pub fn memory(mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instructi
     let regs = regs.lock().unwrap();
     let mut mem = mem.lock().unwrap();
 
-    if let InstrType::Memory(mem_type) = instr.instr_type  {
+    if let InstrType::Memory(mem_type) = instr.instr_type {
         let mem_addr = instr.get_arg_2(&regs) as usize;
         return match mem_type {
             MemoryType::LDR => {
-                if let Some(MemoryValue::Value(response)) = mem.read(mem_addr, StageType::Memory, false) {
+                if let Some(MemoryValue::Value(response)) =
+                    mem.read(mem_addr, StageType::Memory, false)
+                {
                     instr.meta.result = response as i32;
                     return StageResult::DONE;
                 }
                 StageResult::WAIT
-            },
+            }
             MemoryType::STR => {
                 let val_to_store = instr.get_arg_1(&regs) as usize;
-                if mem.write(mem_addr, &MemoryValue::Value(val_to_store), StageType::Memory) {
+                if mem.write(
+                    mem_addr,
+                    &MemoryValue::Value(val_to_store),
+                    StageType::Memory,
+                ) {
                     instr.meta.writeback = false;
                     return StageResult::DONE;
                 }
                 StageResult::WAIT
-            },
-        }
+            }
+        };
     }
     StageResult::DONE
 }
 
-pub fn writeback(mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
-    if instr.meta.squashed { return StageResult::DONE }
+pub fn writeback(
+    mem: SimMemory,
+    regs: Arc<Mutex<Registers>>,
+    instr: &mut Instruction,
+) -> StageResult {
+    if instr.meta.squashed {
+        return StageResult::DONE;
+    }
 
     let mut regs = regs.lock().unwrap();
     if instr.meta.writeback {

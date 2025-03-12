@@ -1,5 +1,5 @@
 use super::{Memory, Transparency};
-use super::{MemoryValue, MemoryAccess};    
+use super::{MemoryAccess, MemoryValue};
 use crate::processor::pipeline::StageType;
 
 #[derive(Debug)]
@@ -31,7 +31,14 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn new(size: usize, block_size: usize, word_size: usize, latency: i32, associativity: usize, lower_level: Box<dyn Memory>) -> Self {
+    pub fn new(
+        size: usize,
+        block_size: usize,
+        word_size: usize,
+        latency: i32,
+        associativity: usize,
+        lower_level: Box<dyn Memory>,
+    ) -> Self {
         let num_lines = size / word_size / block_size;
         Self {
             size,
@@ -46,14 +53,17 @@ impl Cache {
     }
 
     fn create_blank_cache_contents(block_size: usize, num_lines: usize) -> Vec<CacheLine> {
-        vec![CacheLine {
-            addr: 0,
-            valid: false,
-            dirty: false,
-            tag: 0,
-            uses: 0,
-            contents: vec![0; block_size],
-        }; num_lines]
+        vec![
+            CacheLine {
+                addr: 0,
+                valid: false,
+                dirty: false,
+                tag: 0,
+                uses: 0,
+                contents: vec![0; block_size],
+            };
+            num_lines
+        ]
     }
 
     fn align(&self, addr: usize) -> usize {
@@ -64,13 +74,15 @@ impl Cache {
         let addr = self.align(addr);
         CacheLocation {
             offset: (addr / self.word_size) % self.block_size,
-            index:  (addr / (self.word_size * self.block_size)) * self.associativity % self.num_lines,
-            tag:    (addr / (self.size / self.associativity)),
+            index: (addr / (self.word_size * self.block_size)) * self.associativity
+                % self.num_lines,
+            tag: (addr / (self.size / self.associativity)),
         }
     }
 
     fn find_line_in_cache(&self, location: &CacheLocation) -> Option<usize> {
-        ((location.index)..(location.index + self.associativity)).find(|&i| self.contents[i].valid && self.contents[i].tag == location.tag)
+        ((location.index)..(location.index + self.associativity))
+            .find(|&i| self.contents[i].valid && self.contents[i].tag == location.tag)
     }
 
     fn find_line_to_replace(&mut self, location: &CacheLocation) -> usize {
@@ -89,12 +101,11 @@ impl Cache {
         let mut least_used_index: usize = location.index;
 
         for i in (location.index)..(location.index + self.associativity) {
-
             // Add decay so no line gets "stuck" from uses a long time ago
-            self.contents[i].uses = if self.contents[i].uses > 4 { 
-                self.contents[i].uses.ilog2() as usize 
-            } else { 
-                self.contents[i].uses 
+            self.contents[i].uses = if self.contents[i].uses > 4 {
+                self.contents[i].uses.ilog2() as usize
+            } else {
+                self.contents[i].uses
             };
 
             // Return the least used index after decay is applied
@@ -107,7 +118,10 @@ impl Cache {
 
     fn write_to_lower_level(&mut self, index: usize, stage: StageType) -> bool {
         let cloned_value = MemoryValue::Line(self.contents[index].contents.clone());
-        if !self.lower_level.write(self.contents[index].addr, &cloned_value, stage) {
+        if !self
+            .lower_level
+            .write(self.contents[index].addr, &cloned_value, stage)
+        {
             return false;
         }
         self.contents[index].dirty = false;
@@ -115,7 +129,13 @@ impl Cache {
         true
     }
 
-    fn insert_value_into_cache(&mut self, addr: usize, index: usize, location: &CacheLocation, value: &MemoryValue) {
+    fn insert_value_into_cache(
+        &mut self,
+        addr: usize,
+        index: usize,
+        location: &CacheLocation,
+        value: &MemoryValue,
+    ) {
         let cache_line = &mut self.contents[index];
         match value {
             MemoryValue::Line(val) => cache_line.contents = val.clone(),
@@ -127,16 +147,16 @@ impl Cache {
         cache_line.tag = location.tag;
         cache_line.uses += 1;
     }
-
 }
 
 impl Memory for Cache {
     fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue> {
-
         // Apply a delay to simulate the time it would take to access a real cache
-        if !self.access.attempt_access(stage) { return None; }
+        if !self.access.attempt_access(stage) {
+            return None;
+        }
 
-        // Location is the tag / offset / line number that the address would occupy if 
+        // Location is the tag / offset / line number that the address would occupy if
         // it is currently in the cache
         let location = self.cache_location(addr);
 
@@ -145,18 +165,24 @@ impl Memory for Cache {
             self.access.reset_access_state();
             self.contents[cache_line_index].uses += 1;
             return match line {
-                true => Some(MemoryValue::Line(self.contents[cache_line_index].contents.clone())),
-                false => Some(MemoryValue::Value(self.contents[cache_line_index].contents[location.offset])),
-            }
-        } 
+                true => Some(MemoryValue::Line(
+                    self.contents[cache_line_index].contents.clone(),
+                )),
+                false => Some(MemoryValue::Value(
+                    self.contents[cache_line_index].contents[location.offset],
+                )),
+            };
+        }
 
-        // Data not found in the cache, we'll have to grab it from the lower level of memory 
+        // Data not found in the cache, we'll have to grab it from the lower level of memory
         let index_to_replace = self.find_line_to_replace(&location);
 
         // Replacement line was previously written to.  It will need to be written down to the lower
         // level before we can replace it.
-        if self.contents[index_to_replace].dirty && !self.write_to_lower_level(index_to_replace, stage) {
-                return None;
+        if self.contents[index_to_replace].dirty
+            && !self.write_to_lower_level(index_to_replace, stage)
+        {
+            return None;
         }
 
         // Now that the data has been replaced, write the new data into it from the lower level
@@ -165,17 +191,23 @@ impl Memory for Cache {
 
             self.access.reset_access_state();
             return match line {
-                true => Some(MemoryValue::Line(self.contents[index_to_replace].contents.clone())),
-                false => Some(MemoryValue::Value(self.contents[index_to_replace].contents[location.offset])),
-            }
+                true => Some(MemoryValue::Line(
+                    self.contents[index_to_replace].contents.clone(),
+                )),
+                false => Some(MemoryValue::Value(
+                    self.contents[index_to_replace].contents[location.offset],
+                )),
+            };
         }
         None
     }
 
     fn write(&mut self, addr: usize, value: &MemoryValue, stage: StageType) -> bool {
-        if !self.access.attempt_access(stage) { return false; }
+        if !self.access.attempt_access(stage) {
+            return false;
+        }
 
-        // Location is the tag / offset / line number that the address would occupy if 
+        // Location is the tag / offset / line number that the address would occupy if
         // it is currently in the cache
         let location = self.cache_location(addr);
 
@@ -185,12 +217,13 @@ impl Memory for Cache {
             None => self.find_line_to_replace(&location),
         };
 
-        // Cache line is dirty and not the same as our current line.  Needs to be 
-        // written to lower level before being overwritten 
-        if self.contents[cache_line_index].dirty && 
-           self.contents[cache_line_index].tag != location.tag &&
-           !self.write_to_lower_level(cache_line_index, stage) {
-                return false;
+        // Cache line is dirty and not the same as our current line.  Needs to be
+        // written to lower level before being overwritten
+        if self.contents[cache_line_index].dirty
+            && self.contents[cache_line_index].tag != location.tag
+            && !self.write_to_lower_level(cache_line_index, stage)
+        {
+            return false;
         }
 
         // Retrieve the most recent data from the lower level and put it into the cache

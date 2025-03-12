@@ -6,7 +6,6 @@ use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-
 struct SimulatorState {
     sim: Mutex<simulator::Simulator>,
 }
@@ -15,7 +14,7 @@ struct SimulatorState {
 async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
     let mut simulator = data.sim.lock().await;
     simulator.processor.cycle().await;
-    
+
     HttpResponse::Ok().body("🦿")
 }
 
@@ -23,7 +22,7 @@ async fn step(data: web::Data<SimulatorState>) -> HttpResponse {
 async fn run(data: web::Data<SimulatorState>) -> HttpResponse {
     let mut simulator = data.sim.lock().await;
     while simulator.processor.cycle().await {}
-    
+
     HttpResponse::Ok().body("🦿")
 }
 
@@ -50,7 +49,6 @@ async fn flash(program: web::Json<Program>, data: web::Data<SimulatorState>) -> 
     HttpResponse::Ok().body("🦿")
 }
 
-
 #[get("/cycles")]
 async fn get_cycles(data: web::Data<SimulatorState>) -> Result<impl Responder> {
     let simulator = data.sim.lock().await;
@@ -65,11 +63,13 @@ struct UserInterfaceData {
     memory_contents: Vec<Vec<Vec<usize>>>,
     pipeline_values: Vec<Option<Instruction>>,
     pipeline_status: Vec<StageResult>,
-
 }
 
 #[get("/refresh/{line_num}")]
-async fn refresh(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Result<impl Responder> {
+async fn refresh(
+    path: web::Path<usize>,
+    data: web::Data<SimulatorState>,
+) -> Result<impl Responder> {
     let simulator = data.sim.lock().await;
     let mem = simulator.memory.lock().unwrap();
 
@@ -79,13 +79,18 @@ async fn refresh(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Res
     for i in line_num..line_num + 6 {
         memory_contents.push(mem.view_line(i).into_iter().cloned().collect());
     }
-    
+
     Ok(web::Json(UserInterfaceData {
         num_cycles: simulator.processor.view_cycles().await,
         register_values: simulator.processor.view_registers(),
         register_status: simulator.processor.view_register_status(),
         memory_contents,
-        pipeline_values: simulator.processor.view_pipeline_instrs().into_iter().cloned().collect(),
+        pipeline_values: simulator
+            .processor
+            .view_pipeline_instrs()
+            .into_iter()
+            .cloned()
+            .collect(),
         pipeline_status: simulator.processor.view_pipeline_status(),
     }))
 }
@@ -102,7 +107,6 @@ async fn get_regs_status(data: web::Data<SimulatorState>) -> impl Responder {
     web::Json(simulator.processor.view_register_status())
 }
 
-
 #[get("/memory/size")]
 async fn get_size(data: web::Data<SimulatorState>) -> Result<impl Responder> {
     let simulator = data.sim.lock().await;
@@ -112,7 +116,10 @@ async fn get_size(data: web::Data<SimulatorState>) -> Result<impl Responder> {
 }
 
 #[get("/memory/line/{line_num}")]
-async fn get_line(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Result<impl Responder> {
+async fn get_line(
+    path: web::Path<usize>,
+    data: web::Data<SimulatorState>,
+) -> Result<impl Responder> {
     let line_num = path.into_inner();
 
     let simulator = data.sim.lock().await;
@@ -127,23 +134,21 @@ async fn get_line(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Re
     Ok(web::Json(returnable))
 }
 
-
 #[get("/processor/pipeline")]
 async fn get_pipeline(data: web::Data<SimulatorState>) -> Result<impl Responder> {
     let simulator = data.sim.lock().await;
     let status = simulator.processor.view_pipeline_instrs();
 
-    let status: Vec<Option<simulator::processor::instruction::Instruction>> = status.into_iter().cloned().collect();
+    let status: Vec<Option<simulator::processor::instruction::Instruction>> =
+        status.into_iter().cloned().collect();
     Ok(web::Json(status))
 }
-
 
 #[get("/processor/pipeline/status")]
 async fn get_pipeline_status(data: web::Data<SimulatorState>) -> Result<impl Responder> {
     let simulator = data.sim.lock().await;
     Ok(web::Json(simulator.processor.view_pipeline_status()))
 }
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

@@ -1,6 +1,5 @@
-
 use super::{Memory, Transparency};
-use super::{MemoryValue, MemoryAccess};
+use super::{MemoryAccess, MemoryValue};
 use crate::processor::pipeline::StageType;
 
 pub struct RAM {
@@ -28,14 +27,18 @@ impl RAM {
 
     fn addr_to_offset(&self, addr: usize) -> (usize, usize) {
         let addr = self.align(addr);
-        ((addr / self.word_size) % self.size / self.block_size, (addr / self.word_size) % self.block_size)
+        (
+            (addr / self.word_size) % self.size / self.block_size,
+            (addr / self.word_size) % self.block_size,
+        )
     }
-
 }
 
 impl Memory for RAM {
     fn read(&mut self, addr: usize, stage: StageType, line: bool) -> Option<MemoryValue> {
-        if !self.access.attempt_access(stage) { return None; }
+        if !self.access.attempt_access(stage) {
+            return None;
+        }
         self.access.reset_access_state();
 
         let addr = self.addr_to_offset(addr);
@@ -46,7 +49,9 @@ impl Memory for RAM {
     }
 
     fn write(&mut self, addr: usize, value: &MemoryValue, stage: StageType) -> bool {
-        if !self.access.attempt_access(stage) { return false; }
+        if !self.access.attempt_access(stage) {
+            return false;
+        }
         self.access.reset_access_state();
 
         let addr = self.addr_to_offset(addr);

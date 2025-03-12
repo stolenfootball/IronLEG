@@ -23,23 +23,23 @@ pub enum Register {
 impl Register {
     pub fn from_i32(reg: i32) -> Register {
         match reg {
-             0 => Register::R0,
-             1 => Register::R1,
-             2 => Register::R2,
-             3 => Register::R3,
-             4 => Register::R4,
-             5 => Register::R5,
-             6 => Register::R6,
-             7 => Register::R7,
-             8 => Register::R8,
-             9 => Register::R9,
+            0 => Register::R0,
+            1 => Register::R1,
+            2 => Register::R2,
+            3 => Register::R3,
+            4 => Register::R4,
+            5 => Register::R5,
+            6 => Register::R6,
+            7 => Register::R7,
+            8 => Register::R8,
+            9 => Register::R9,
             10 => Register::R10,
             11 => Register::R11,
             12 => Register::SP,
             13 => Register::BF,
             14 => Register::LR,
             15 => Register::PC,
-            _ => panic!("Register convert failure: {}", reg)
+            _ => panic!("Register convert failure: {}", reg),
         }
     }
 }
@@ -76,4 +76,3 @@ impl Registers {
         self.registers = [0; 16];
     }
 }
-

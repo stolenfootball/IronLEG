@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use serde::Serialize;
+use std::sync::{Arc, Mutex};
 
 use super::instruction::Instruction;
 use super::registers::Registers;
@@ -32,7 +32,13 @@ pub struct Stage {
 }
 
 impl Stage {
-    pub fn create(mem: SimMemory, regs: Arc<Mutex<Registers>>, stage_type: StageType, prev_stage: Option<Box<Stage>>, is_head: bool) -> Stage {
+    pub fn create(
+        mem: SimMemory,
+        regs: Arc<Mutex<Registers>>,
+        stage_type: StageType,
+        prev_stage: Option<Box<Stage>>,
+        is_head: bool,
+    ) -> Stage {
         Stage {
             status: StageResult::DONE,
             pipeline_on: true,
@@ -43,14 +49,13 @@ impl Stage {
             regs,
             prev_stage,
             process: match stage_type {
-                StageType::Fetch => stages::fetch, 
+                StageType::Fetch => stages::fetch,
                 StageType::Decode => stages::decode,
                 StageType::Execute => stages::execute,
                 StageType::Memory => stages::memory,
                 StageType::Writeback => stages::writeback,
             },
         }
-        
     }
 
     pub fn set_prev(&mut self, prev_stage: Box<Stage>) {
@@ -68,7 +73,7 @@ impl Stage {
                 if self.instruction.is_none() && prev.status == StageResult::DONE {
                     self.instruction = prev.transfer();
                 }
-            },
+            }
             None => {
                 if self.instruction.is_none() && self.pipeline_on {
                     self.instruction = Some(Instruction::default())
@@ -89,21 +94,30 @@ impl Stage {
     }
 
     pub async fn cycle(&mut self) -> bool {
-        if self.status == StageResult::HALT { return false; }
-        
+        if self.status == StageResult::HALT {
+            return false;
+        }
+
         self.load();
         if let Some(instr) = &mut self.instruction {
-            if instr.meta.squashed { self.status =  StageResult::DONE }
-            if self.status !=  StageResult::DONE || self.is_head {
+            if instr.meta.squashed {
+                self.status = StageResult::DONE
+            }
+            if self.status != StageResult::DONE || self.is_head {
                 self.status = (self.process)(Arc::clone(&self.mem), Arc::clone(&self.regs), instr);
             }
-            if self.status == StageResult::SQUASH { self.squash(); self.status = StageResult::DONE }
-            if self.status ==  StageResult::DONE && self.is_head { self.instruction = None }
+            if self.status == StageResult::SQUASH {
+                self.squash();
+                self.status = StageResult::DONE
+            }
+            if self.status == StageResult::DONE && self.is_head {
+                self.instruction = None
+            }
         }
         if let Some(prev) = &mut self.prev_stage {
             Box::pin(prev.cycle()).await;
         }
-        
+
         self.cycles += 1;
         true
     }
@@ -117,14 +131,14 @@ impl Stage {
             prev_stage.reset();
         }
     }
-} 
+}
 
 // Functions for external visibility separated out for clarity
 impl Stage {
     pub fn view_pipeline_instrs(&self) -> Vec<&Option<Instruction>> {
         let mut instrs = match &self.prev_stage {
             Some(prev) => prev.view_pipeline_instrs(),
-            None => vec![]
+            None => vec![],
         };
         instrs.push(&self.instruction);
         instrs
@@ -133,7 +147,7 @@ impl Stage {
     pub fn view_pipeline_status(&self) -> Vec<StageResult> {
         let mut instrs = match &self.prev_stage {
             Some(prev) => prev.view_pipeline_status(),
-            None => vec![]
+            None => vec![],
         };
         instrs.push(self.status);
         instrs

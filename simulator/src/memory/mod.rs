@@ -1,9 +1,8 @@
-pub mod ram;
 pub mod cache;
+pub mod ram;
 
-
-pub use self::ram::RAM;
 pub use self::cache::Cache;
+pub use self::ram::RAM;
 pub use crate::processor::pipeline::StageType;
 
 #[derive(Debug, Clone)]
@@ -31,11 +30,11 @@ impl MemoryAccess {
     pub fn attempt_access(&mut self, attempt_stage: StageType) -> bool {
         match self.stage {
             Some(current_stage) => {
-                if current_stage != attempt_stage { 
-                    return false; 
+                if current_stage != attempt_stage {
+                    return false;
                 }
-            },
-            None => self.stage = Some(attempt_stage)
+            }
+            None => self.stage = Some(attempt_stage),
         }
         self.cycles_to_completion -= 1;
         self.cycles_to_completion <= 0
