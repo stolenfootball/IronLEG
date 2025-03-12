@@ -9,6 +9,7 @@ pub mod instruction;
 pub mod registers;
 pub mod pipeline;
 pub mod stages;
+pub mod predictor;
 
 
 pub fn new(mem: Arc<Mutex<Box<dyn Memory>>>) -> Box<pipeline::Stage> {
