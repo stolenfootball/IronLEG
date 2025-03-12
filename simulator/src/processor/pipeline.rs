@@ -17,6 +17,8 @@ pub enum StageResult {
     HALT,
 }
 
+pub type SimMemory = Arc<Mutex<Box<dyn Memory>>>;
+
 pub struct Stage {
     pub status: StageResult,
     is_head: bool,
@@ -26,11 +28,11 @@ pub struct Stage {
     mem: Arc<Mutex<Box<dyn Memory>>>,
     regs: Arc<Mutex<Registers>>,
     prev_stage: Option<Box<Stage>>,
-    process: fn(Arc<Mutex<Box<dyn Memory>>>, Arc<Mutex<Registers>>, &mut Instruction) -> StageResult,
+    process: fn(SimMemory, Arc<Mutex<Registers>>, &mut Instruction) -> StageResult,
 }
 
 impl Stage {
-    pub fn create(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, stage_type: StageType, prev_stage: Option<Box<Stage>>, is_head: bool) -> Stage {
+    pub fn create(mem: SimMemory, regs: Arc<Mutex<Registers>>, stage_type: StageType, prev_stage: Option<Box<Stage>>, is_head: bool) -> Stage {
         Stage {
             status: StageResult::DONE,
             pipeline_on: true,

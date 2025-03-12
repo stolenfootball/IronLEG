@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use crate::memory::{Memory, MemoryValue};
+use crate::memory::MemoryValue;
 
 use super::registers::{Register, Registers};
 use super::instruction::{Instruction, ALUType, AddrMode, ControlType, InstrType, InterruptType, MemoryType};
-use super::pipeline::StageResult;
+use super::pipeline::{StageResult, SimMemory};
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -17,7 +17,7 @@ pub enum StageType {
 }
 
 
-pub fn fetch(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+pub fn fetch(mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
     let instr_addr = regs.lock().unwrap().get_reg(Register::PC) as usize;
     if let Some(MemoryValue::Value(value)) = mem.lock().unwrap().read(instr_addr, StageType::Fetch, false) {
         instr.instr_raw = value as i32;
@@ -28,7 +28,7 @@ pub fn fetch(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, inst
     StageResult::WAIT
 }
 
-pub fn decode(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+pub fn decode(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
     let raw = instr.instr_raw;
 
     let opcode = (raw >> 25) & 0xF;
@@ -101,7 +101,7 @@ pub fn decode(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, in
     StageResult::DONE
 }
 
-pub fn execute(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+pub fn execute(_mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
     let regs = regs.lock().unwrap();
     match instr.instr_type {
         InstrType::ALU(opcode) => {
@@ -143,7 +143,7 @@ pub fn execute(_mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, i
     }
 }
 
-pub fn memory(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+pub fn memory(mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
     let regs = regs.lock().unwrap();
     let mut mem = mem.lock().unwrap();
 
@@ -170,7 +170,7 @@ pub fn memory(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, ins
     StageResult::DONE
 }
 
-pub fn writeback(mem: Arc<Mutex<Box<dyn Memory>>>, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
+pub fn writeback(mem: SimMemory, regs: Arc<Mutex<Registers>>, instr: &mut Instruction) -> StageResult {
     if instr.meta.squashed { return StageResult::DONE }
 
     let mut regs = regs.lock().unwrap();
