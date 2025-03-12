@@ -20,12 +20,12 @@ impl Simulator {
 
         Simulator {
             processor: processor::new(Arc::clone(&memory)),
-            memory: memory,
+            memory,
         }
     }
 
-    pub fn flash(&mut self, addr: usize, program: &Vec<u32>) {
-        let program: Vec<usize> = program.into_iter().map(|x| *x as usize).collect();
+    pub fn flash(&mut self, addr: usize, program: &[u32]) {
+        let program: Vec<usize> = program.iter().map(|x| *x as usize).collect();
         self.memory.lock().unwrap().flash(addr, &program);
     }
 

@@ -32,7 +32,7 @@ impl Predictor {
             self.global_history_register = (self.global_history_register << 1) | 1 & (PATTERN_HISTORY_TABLE_LENGTH - 1);
         } else {
             self.pattern_history_table[index] -= if self.pattern_history_table[index] > 0 { 1 } else { 0 };
-            self.global_history_register = (self.global_history_register << 1) | 0 & (PATTERN_HISTORY_TABLE_LENGTH - 1);
+            self.global_history_register = (self.global_history_register << 1)     & (PATTERN_HISTORY_TABLE_LENGTH - 1);
         }
     }
 

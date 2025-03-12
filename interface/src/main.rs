@@ -1,10 +1,8 @@
-use simulator;
 use simulator::assembler;
 use simulator::processor::instruction::Instruction;
 use simulator::processor::pipeline::StageResult;
 
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, Result};
-use actix_files;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
@@ -79,15 +77,15 @@ async fn refresh(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Res
 
     let mut memory_contents: Vec<Vec<Vec<usize>>> = vec![];
     for i in line_num..line_num + 6 {
-        memory_contents.push(mem.view_line(i).into_iter().map(|x| x.clone()).collect());
+        memory_contents.push(mem.view_line(i).into_iter().cloned().collect());
     }
     
     Ok(web::Json(UserInterfaceData {
         num_cycles: simulator.processor.view_cycles().await,
         register_values: simulator.processor.view_registers(),
         register_status: simulator.processor.view_register_status(),
-        memory_contents: memory_contents,
-        pipeline_values: simulator.processor.view_pipeline_instrs().into_iter().map(|x| x.clone()).collect(),
+        memory_contents,
+        pipeline_values: simulator.processor.view_pipeline_instrs().into_iter().cloned().collect(),
         pipeline_status: simulator.processor.view_pipeline_status(),
     }))
 }
@@ -123,7 +121,7 @@ async fn get_line(path: web::Path<usize>, data: web::Data<SimulatorState>) -> Re
     let mut returnable: Vec<Vec<Vec<usize>>> = vec![];
     for i in line_num..line_num + 5 {
         let lines = mem.view_line(i);
-        returnable.push(lines.into_iter().map(|x| x.clone()).collect());
+        returnable.push(lines.into_iter().cloned().collect());
     }
 
     Ok(web::Json(returnable))
@@ -135,7 +133,7 @@ async fn get_pipeline(data: web::Data<SimulatorState>) -> Result<impl Responder>
     let simulator = data.sim.lock().unwrap();
     let status = simulator.processor.view_pipeline_instrs();
 
-    let status: Vec<Option<simulator::processor::instruction::Instruction>> = status.into_iter().map(|x| x.clone()).collect();
+    let status: Vec<Option<simulator::processor::instruction::Instruction>> = status.into_iter().cloned().collect();
     Ok(web::Json(status))
 }
 

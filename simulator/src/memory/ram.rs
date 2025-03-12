@@ -14,9 +14,9 @@ pub struct RAM {
 impl RAM {
     pub fn new(size: usize, block_size: usize, word_size: usize, latency: i32) -> Self {
         Self {
-            size: size,
-            block_size: block_size,
-            word_size: word_size,
+            size,
+            block_size,
+            word_size,
             access: MemoryAccess::new(latency, None),
             contents: vec![vec![0; block_size]; size],
         }
@@ -61,7 +61,7 @@ impl Memory for RAM {
         self.access.reset_access_state();
     }
 
-    fn flash(&mut self, addr: usize, program: &Vec<usize>) {
+    fn flash(&mut self, addr: usize, program: &[usize]) {
         let addr = self.align(addr);
         for i in (0..(program.len() * 4)).step_by(4) {
             let addr = self.addr_to_offset(addr + i);

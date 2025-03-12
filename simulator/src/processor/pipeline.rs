@@ -34,12 +34,12 @@ impl Stage {
         Stage {
             status: StageResult::DONE,
             pipeline_on: true,
-            is_head: is_head,
+            is_head,
             cycles: 0,
             instruction: None,
-            mem: mem,
-            regs: regs,
-            prev_stage: prev_stage,
+            mem,
+            regs,
+            prev_stage,
             process: match stage_type {
                 StageType::Fetch => stages::fetch, 
                 StageType::Decode => stages::decode,

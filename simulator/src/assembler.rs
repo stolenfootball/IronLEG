@@ -86,7 +86,7 @@ fn parse_hex(input: &str) -> IResult<&str, u32> {
             )
         )
     ),
-    |out: &str| u32::from_str_radix(&str::replace(&out, "_", ""), 16)
+    |out: &str| u32::from_str_radix(&str::replace(out, "_", ""), 16)
     )(input)
 }
 
@@ -111,15 +111,15 @@ fn parse_line(input: &str) -> u32 {
     // println!("{:?} {:?}", instr_type, ops);
 
     let mut instr: u32 = match instr_type {
-        InstrType::ALU(opcode) => 0b000 << 29 | (opcode as u32) << 25,
-        InstrType::Memory(opcode) => 0b001 << 29 | (opcode as u32) << 25,
-        InstrType::Control(opcode) => 0b010 << 29 | (opcode as u32) << 25,
+        InstrType::ALU(opcode) =>                           (opcode as u32) << 25,
+        InstrType::Memory(opcode) =>       0b001 << 29 | (opcode as u32) << 25,
+        InstrType::Control(opcode) =>     0b010 << 29 | (opcode as u32) << 25,
         InstrType::Interrupt(opcode) => 0b011 << 29 | (opcode as u32) << 25
     };
 
     if ops.len() == 2 {
         if ops[0].0 == AddrMode::Reg && ops[1].0 == AddrMode::Reg {
-            instr |= 0b000 << 22 | ops[0].1 << 18 | ops[1].1 << 14;
+            instr |=               ops[0].1 << 18 | ops[1].1 << 14;
         }
         else if ops[0].0 == AddrMode::Reg && ops[1].0 == AddrMode::Imm {
             instr |= 0b010 << 22 | ops[0].1 << 18 | ops[1].1;
@@ -138,5 +138,5 @@ fn parse_line(input: &str) -> u32 {
 }
 
 pub fn assemble(input: &str) -> Vec<u32>{
-    input.split("\n").into_iter().map(|line| parse_line(&line)).collect::<Vec<u32>>()
+    input.split("\n").map(parse_line).collect::<Vec<u32>>()
 }

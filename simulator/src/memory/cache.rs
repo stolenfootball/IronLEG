@@ -70,12 +70,7 @@ impl Cache {
     }
 
     fn find_line_in_cache(&self, location: &CacheLocation) -> Option<usize> {
-        for i in (location.index)..(location.index + self.associativity) {
-            if self.contents[i].valid && self.contents[i].tag == location.tag {
-                return Some(i); 
-            }
-        }
-        None
+        ((location.index)..(location.index + self.associativity)).find(|&i| self.contents[i].valid && self.contents[i].tag == location.tag)
     }
 
     fn find_line_to_replace(&mut self, location: &CacheLocation) -> usize {
@@ -160,10 +155,8 @@ impl Memory for Cache {
 
         // Replacement line was previously written to.  It will need to be written down to the lower
         // level before we can replace it.
-        if self.contents[index_to_replace].dirty {
-            if !self.write_to_lower_level(index_to_replace, stage) {
+        if self.contents[index_to_replace].dirty && !self.write_to_lower_level(index_to_replace, stage) {
                 return None;
-            }
         }
 
         // Now that the data has been replaced, write the new data into it from the lower level
@@ -194,10 +187,10 @@ impl Memory for Cache {
 
         // Cache line is dirty and not the same as our current line.  Needs to be 
         // written to lower level before being overwritten 
-        if self.contents[cache_line_index].dirty && self.contents[cache_line_index].tag != location.tag {
-            if !self.write_to_lower_level(cache_line_index, stage) {
+        if self.contents[cache_line_index].dirty && 
+           self.contents[cache_line_index].tag != location.tag &&
+           !self.write_to_lower_level(cache_line_index, stage) {
                 return false;
-            }
         }
 
         // Retrieve the most recent data from the lower level and put it into the cache
@@ -221,7 +214,7 @@ impl Memory for Cache {
         self.access.reset_access_state();
     }
 
-    fn flash(&mut self, addr: usize, program: &Vec<usize>) {
+    fn flash(&mut self, addr: usize, program: &[usize]) {
         self.lower_level.flash(addr, program);
     }
 
