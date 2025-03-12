@@ -50,14 +50,16 @@ pub struct Registers {
     pub in_use: [bool; 16],
 }
 
-impl Registers {
-    pub fn new() -> Registers {
+impl Default for Registers {
+    fn default() -> Self {
         Registers {
             registers: [0; 16],
             in_use: [false; 16],
         }
     }
+}
 
+impl Registers {
     pub fn get_reg(&self, reg: Register) -> i32 {
         self.registers[reg as usize]
     }

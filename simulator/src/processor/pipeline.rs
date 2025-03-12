@@ -69,7 +69,7 @@ impl Stage {
             },
             None => {
                 if self.instruction.is_none() && self.pipeline_on {
-                    self.instruction = Some(Instruction::new())
+                    self.instruction = Some(Instruction::default())
                 }
             }
         };

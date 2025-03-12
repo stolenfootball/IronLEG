@@ -7,15 +7,17 @@ pub struct Predictor {
     pattern_history_table: Vec<u8>
 }
 
-impl Predictor {
-    pub fn new() -> Predictor {
+impl Default for Predictor {
+    fn default() -> Self {
         Predictor {
             global_history_register: 0,
             pattern_history_table: vec![2_u8.pow(COUNTER_BITS); 
                                         PATTERN_HISTORY_TABLE_LENGTH],
         }
     }
+}
 
+impl Predictor {
     fn get_table_index(&self, program_counter: u32) -> usize {
         (program_counter as usize ^ self.global_history_register) & (PATTERN_HISTORY_TABLE_LENGTH - 1)
     }

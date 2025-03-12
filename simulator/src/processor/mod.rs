@@ -13,7 +13,7 @@ pub mod predictor;
 
 
 pub fn new(mem: Arc<Mutex<Box<dyn Memory>>>) -> Box<pipeline::Stage> {
-    let regs = Arc::new(Mutex::new(Registers::new()));
+    let regs = Arc::new(Mutex::new(Registers::default()));
 
     let fetch_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Fetch, None, false));
     let decode_stage = Box::new(pipeline::Stage::create(Arc::clone(&mem), Arc::clone(&regs), StageType::Decode, Some(fetch_stage), false));

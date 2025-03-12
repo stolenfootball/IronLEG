@@ -12,6 +12,12 @@ pub struct Simulator {
     pub memory: Arc<Mutex<Box<dyn Memory>>>,
 }
 
+impl Default for Simulator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Simulator {
     pub fn new() -> Simulator {
         let ram = Box::new(memory::RAM::new(65536, 16, 4, 5));

@@ -146,8 +146,8 @@ pub struct Instruction {
     pub meta: InstrMeta,
 }
 
-impl Instruction {
-    pub fn new() -> Self {
+impl Default for Instruction {
+    fn default() -> Self {
         Self {
             instr_raw: 0,
             instr_type: InstrType::ALU(ALUType::MOV),
@@ -164,7 +164,9 @@ impl Instruction {
             },
         }
     }
+}
 
+impl Instruction {
     pub fn get_arg_1(&self, regs: &Registers) -> i32 {
         match self.addr_mode {
             AddrMode::RegReg => regs.get_reg(self.reg_1),
