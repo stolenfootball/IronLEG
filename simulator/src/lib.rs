@@ -1,11 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use crate::memory::Memory;
 use crate::processor::pipeline;
+use crate::memory::Memory;
 
-pub mod assembler;
 pub mod memory;
+pub mod assembler;
 pub mod processor;
+pub mod dynamic;
 
 pub struct Simulator {
     pub processor: Box<pipeline::Stage>,
