@@ -3,17 +3,18 @@ use super::super::registers::{self, Registers, Register};
 use super::super::reservation::ReservationStations;
 use super::super::instruction::{self, Operation, AddrMode};
 
-pub fn fetch(mem: Box<&mut dyn Memory>, regs: &mut Registers) {
+fn fetch(mem: Box<&mut dyn Memory>, regs: &mut Registers) {
     if let Register::Value(next_instr_addr) = regs.registers[registers::PC] {
         if let Some(MemoryValue::Value(value)) =
             mem.read(next_instr_addr, StageType::Fetch, false)
         {
             regs.instr_queue.push_back(value);
+            regs.registers[registers::PC] = Register::Value(value + 4);
         }
     }
 }
 
-pub fn decode(
+fn decode(
     regs: &mut Registers,
     stations: &mut ReservationStations,
     instr: usize,
@@ -57,4 +58,15 @@ pub fn decode(
         }
     }
     
+}
+
+pub fn issue(
+    regs: &mut Registers,
+    stations: &mut ReservationStations,
+    mem: Box<&mut dyn Memory>,
+) {
+    fetch(mem, regs);
+    if let Some(instr) = regs.instr_queue.pop_back() {
+        decode(regs, stations, instr);
+    } 
 }
